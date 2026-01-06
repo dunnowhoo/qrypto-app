@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @layer base {
   :root {
     --background: #ffffff;
@@ -118,7 +119,11 @@
 
 /* Header - Wallet */
 .wallet-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   padding: 16px 20px;
   display: flex;
   align-items: center;
@@ -150,7 +155,11 @@
 
 /* Balance Section */
 .balance-section {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   padding: 0 20px 30px;
   text-align: center;
   border-bottom-left-radius: 24px;
@@ -665,7 +674,11 @@
 }
 
 .modal-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   padding: 20px;
   display: flex;
   align-items: flex-start;
@@ -730,7 +743,11 @@
 }
 
 .modal-amount {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   padding: 0 20px 24px;
   text-align: center;
 }

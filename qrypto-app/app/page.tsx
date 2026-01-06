@@ -2,6 +2,7 @@
 import Image from "next/image";
 import styles from "./page.module.css";
 import { Wallet } from "@coinbase/onchainkit/wallet";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -9,6 +10,12 @@ export default function Home() {
       <header className={styles.headerWrapper}>
         <Wallet />
       </header>
+      <nav className="flex gap-6 mx-auto font-bold text-3xl bg-amber-50 h-fit underline">
+        <Link href="/settings">Settings </Link>
+        <Link href="/history">history </Link>
+        <Link href="/walletpage">Wallet </Link>
+        <Link href="/profile">Profile </Link>
+      </nav>
 
       <div className={styles.content}>
         <Image
