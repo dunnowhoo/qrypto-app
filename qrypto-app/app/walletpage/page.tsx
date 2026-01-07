@@ -1,7 +1,26 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
+import {
+  ConnectWallet,
+  Wallet,
+  WalletDropdown,
+  WalletDropdownBasename,
+  WalletDropdownFundLink,
+  WalletDropdownLink,
+  WalletDropdownDisconnect,
+} from "@coinbase/onchainkit/wallet";
+import {
+  Address,
+  Avatar,
+  Name,
+  Identity,
+  EthBalance,
+} from "@coinbase/onchainkit/identity";
+import { useAuth } from "../context/AuthContext";
 import BottomNavbar from "../components/BottomNavbar";
+import { History, Settings, User } from "lucide-react";
 
 // Token data
 const tokens = [
@@ -58,12 +77,14 @@ export default function WalletPage() {
   const [activeTab, setActiveTab] = useState<"tokens" | "nfts">("tokens");
   const [balanceVisible, setBalanceVisible] = useState(true);
   const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { user } = useAuth();
 
   const totalBalance = "Rp 4.950.000";
 
   return (
     <div className="app-container">
-      {/* Header */}
+      {/* Header with Wallet Component */}
       <div className="wallet-header">
         <button className="header-btn-light" onClick={() => router.back()}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -77,49 +98,119 @@ export default function WalletPage() {
           </svg>
         </button>
         <h1 className="header-title-light">My Wallet</h1>
-        <button
-          className="header-btn-light"
-          onClick={() => setBalanceVisible(!balanceVisible)}
-        >
-          {balanceVisible ? (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="3"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M17.94 17.94A10.07 10.07 0 0112 20C5 20 1 12 1 12A18.45 18.45 0 015.06 6.06M9.9 4.24A9.12 9.12 0 0112 4C19 4 23 12 23 12A18.5 18.5 0 0119.18 16.82M1 1L23 23"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </button>
+        
+        {/* OnchainKit Wallet Component */}
+        <div className="flex items-center">
+          <Wallet>
+            <ConnectWallet>
+              <Avatar className="h-6 w-6" />
+              <Name className="text-white text-sm" />
+            </ConnectWallet>
+            <WalletDropdown>
+              <Identity 
+                className="px-4 pt-3 pb-2 hover:bg-gray-100"
+                hasCopyAddressOnClick
+              >
+                <Avatar />
+                <Name />
+                <Address className="text-gray-500" />
+                <EthBalance />
+              </Identity>
+              <WalletDropdownBasename />
+              <WalletDropdownLink
+                icon="wallet"
+                href="https://keys.coinbase.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Coinbase Wallet
+              </WalletDropdownLink>
+              <WalletDropdownLink
+                icon={<Settings className="w-4 h-4" />}
+                href="/settings"
+              >
+                Settings
+              </WalletDropdownLink>
+              <WalletDropdownLink
+                icon={<History className="w-4 h-4" />}
+                href="/history"
+              >
+                History
+              </WalletDropdownLink>
+              <WalletDropdownLink
+                icon={<User className="w-4 h-4" />}
+                href="/profile"
+              >
+                Profile
+              </WalletDropdownLink>
+              <WalletDropdownFundLink />
+              <WalletDropdownDisconnect />
+            </WalletDropdown>
+          </Wallet>
+        </div>
       </div>
+
+      {/* User Info Card - Show logged in user */}
+      {isConnected && user && (
+        <div className="mx-4 mt-4 p-4 bg-linear-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <Avatar address={address} className="h-12 w-12" />
+            <div className="flex-1">
+              <Name address={address} className="text-white font-semibold text-lg" />
+              <Address address={address} className="text-white/80 text-sm" />
+            </div>
+          </div>
+          {user.fullName && (
+            <p className="text-white/90 text-sm mt-2">
+              Welcome back, {user.fullName}!
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Balance Section */}
       <div className="balance-section">
         <p className="balance-label">Total Balance</p>
-        <h2 className="balance-amount">
-          {balanceVisible ? totalBalance : "••••••••"}
-        </h2>
+        <div className="flex items-center justify-center gap-2">
+          <h2 className="balance-amount">
+            {balanceVisible ? totalBalance : "••••••••"}
+          </h2>
+          <button
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            onClick={() => setBalanceVisible(!balanceVisible)}
+          >
+            {balanceVisible ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M17.94 17.94A10.07 10.07 0 0112 20C5 20 1 12 1 12A18.45 18.45 0 015.06 6.06M9.9 4.24A9.12 9.12 0 0112 4C19 4 23 12 23 12A18.5 18.5 0 0119.18 16.82M1 1L23 23"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
         <p className="asset-count">Across 4 assets</p>
 
         {/* Action Buttons */}
