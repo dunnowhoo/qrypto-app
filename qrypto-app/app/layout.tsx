@@ -28,6 +28,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${sourceCodePro.variable}`}>
         <RootProvider>{children}</RootProvider>
+        {/* {children} */}
       </body>
     </html>
   );
