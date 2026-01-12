@@ -9,7 +9,7 @@ import { useAccount } from "wagmi";
 export default function ProfilePage() {
   const router = useRouter();
   const { user, updateProfile, isAuthenticated, isLoading } = useAuth();
-  const { address } = useAccount();
+  const { address: _address } = useAccount();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({

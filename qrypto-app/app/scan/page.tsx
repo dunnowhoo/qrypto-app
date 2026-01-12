@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "../context/AuthContext";
-import { parseQRIS, isQRISCode, formatIDR, SAMPLE_QRIS } from "../lib/qrisParser";
-import { ChevronLeft, QrCode, Keyboard, AlertCircle } from "lucide-react";
+import { parseQRIS, isQRISCode, SAMPLE_QRIS } from "../lib/qrisParser";
+import { ChevronLeft, Keyboard, AlertCircle } from "lucide-react";
 
 // Dynamic import for QR Scanner to avoid SSR issues
 const QRScanner = dynamic(() => import("../components/QRScanner"), {

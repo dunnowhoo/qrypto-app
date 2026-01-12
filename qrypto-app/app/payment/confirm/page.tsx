@@ -22,7 +22,7 @@ const TREASURY_WALLET = "0x742d35Cc6634C0532925a3b844Bc9e7595f0Fa1A";
 export default function PaymentConfirmPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user: _user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [qrisData, setQrisData] = useState<QrisData | null>(null);
   const [amount, setAmount] = useState<string>("");
