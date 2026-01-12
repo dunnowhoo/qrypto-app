@@ -38,7 +38,8 @@ export function RootProvider({ children }: { children: ReactNode }) {
             },
             wallet: {
               display: "modal",
-              preference: "all",
+              termsUrl: "https://qrypto.app/terms",
+              privacyUrl: "https://qrypto.app/privacy",
             },
           }}
         >

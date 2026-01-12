@@ -86,8 +86,18 @@ const categories = [
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  // Get user initials from fullName
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
   const [selectedMonth] = useState("December 2025");
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
@@ -155,7 +165,7 @@ export default function Home() {
                   background: "linear-gradient(135deg, rgba(43, 127, 255, 1) 0%, rgba(0, 184, 219, 1) 100%)",
                 }}
               >
-                JD
+                {getInitials(user?.fullName)}
               </div>
               <div className="absolute -bottom-1 left-3 bg-[#00c950] text-white text-[10px] px-2 py-0.5 rounded-full border-2 border-white font-medium tracking-wide">
                 KYC
@@ -163,7 +173,7 @@ export default function Home() {
             </div>
             <div>
               <p className="text-[#6a7282] text-sm tracking-[-0.15px]">Welcome back</p>
-              <p className="text-[#101828] text-base font-medium tracking-[-0.31px]">John Doe</p>
+              <p className="text-[#101828] text-base font-medium tracking-[-0.31px]">{user?.fullName || "User"}</p>
             </div>
           </Link>
           
@@ -189,14 +199,20 @@ export default function Home() {
             <p className="text-white/90 text-sm tracking-[-0.15px] mb-6">≈ Rp 1.500.000</p>
             
             <div className="flex gap-3">
-              <button className="flex-1 h-[46px] bg-white/20 border border-white/30 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
+              <Link 
+                href="/walletpage"
+                className="flex-1 h-[46px] bg-white/20 border border-white/30 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-colors"
+              >
                 <Plus className="w-4 h-4 text-white" />
                 <span className="text-white text-sm tracking-[-0.15px]">Top Up</span>
-              </button>
-              <button className="flex-1 h-[46px] bg-white rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-gray-50 transition-colors">
+              </Link>
+              <Link 
+                href="/scan"
+                className="flex-1 h-[46px] bg-white rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-gray-50 transition-colors"
+              >
                 <QrCode className="w-4 h-4 text-[#155dfc]" />
                 <span className="text-[#155dfc] text-sm tracking-[-0.15px]">Scan QR</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>

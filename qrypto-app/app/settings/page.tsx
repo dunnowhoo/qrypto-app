@@ -103,8 +103,10 @@ export default function SettingsPage() {
     router.push("/");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     logout();
+    // Small delay to ensure state is cleared
+    await new Promise(resolve => setTimeout(resolve, 100));
     router.push("/login");
   };
 

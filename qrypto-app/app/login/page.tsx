@@ -16,19 +16,24 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   
   const { address, isConnected } = useAccount();
-  const { signAndLogin, isAuthenticated } = useAuth();
+  const { signAndLogin, isAuthenticated, isNewUser } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Redirect if already authenticated
+  // Redirect based on auth status
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/");
+      if (isNewUser) {
+        // New user needs to complete profile
+        router.push("/register");
+      } else {
+        router.push("/");
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isNewUser, router]);
 
   const handleWalletLogin = async () => {
     if (loading) return; // Prevent double execution
@@ -36,8 +41,14 @@ export default function LoginPage() {
     try {
       setLoading(true);
       setError("");
-      await signAndLogin();
-      // Don't navigate here - let isAuthenticated effect handle it
+      const newUser = await signAndLogin();
+      
+      // Redirect based on whether user is new
+      if (newUser) {
+        router.push("/register");
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       console.error("Wallet login error:", err);
       setError("Failed to authenticate. Please try again.");

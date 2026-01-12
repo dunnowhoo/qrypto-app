@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
       where: { address: address.toLowerCase() },
     });
 
+    let isNewUser = false;
+
     if (!user) {
       // Create new user if doesn't exist
       user = await prisma.user.create({
@@ -24,10 +26,15 @@ export async function POST(request: NextRequest) {
           address: address.toLowerCase(),
         },
       });
+      isNewUser = true;
+    } else {
+      // Check if user has completed profile (has fullName)
+      isNewUser = !user.fullName;
     }
 
     return NextResponse.json({
       success: true,
+      isNewUser,
       user: {
         id: user.id,
         address: user.address,

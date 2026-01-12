@@ -14,10 +14,12 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (address: string, signature?: string) => Promise<void>;
+  isNewUser: boolean;
+  login: (address: string, signature?: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
-  signAndLogin: () => Promise<void>;
+  signAndLogin: () => Promise<boolean>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
@@ -47,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isConnected, address, user]);
 
-  const signAndLogin = async () => {
+  const signAndLogin = async (): Promise<boolean> => {
     if (!address) throw new Error("No wallet connected");
 
     try {
@@ -60,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signature = await signMessageAsync({ message });
       
       // Login with verified signature
-      await login(address, signature);
+      return await login(address, signature);
     } catch (error) {
       console.error("Sign and login error:", error);
       throw error;
@@ -69,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (walletAddress: string, signature?: string) => {
+  const login = async (walletAddress: string, signature?: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       
@@ -95,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
+      
+      // Check if this is a new user who needs to complete registration
+      const newUser = data.isNewUser || false;
+      setIsNewUser(newUser);
 
       const userData: User = {
         address: walletAddress,
@@ -102,6 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       setUser(userData);
       localStorage.setItem("qrypto_user", JSON.stringify(userData));
+      
+      return newUser;
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -134,6 +143,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const updatedUser = { ...user, ...data };
         setUser(updatedUser);
         localStorage.setItem("qrypto_user", JSON.stringify(updatedUser));
+        // If profile is now complete, no longer a new user
+        if (data.fullName) {
+          setIsNewUser(false);
+        }
       } else {
         throw new Error(result.error || "Update failed");
       }
@@ -143,16 +156,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    if (!user?.address) return;
+    
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: user.address }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const userData: User = {
+          address: user.address,
+          ...data.user,
+        };
+        setUser(userData);
+        localStorage.setItem("qrypto_user", JSON.stringify(userData));
+        setIsNewUser(data.isNewUser || false);
+      }
+    } catch (error) {
+      console.error("Refresh user error:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        isNewUser,
         login,
         logout,
         updateProfile,
         signAndLogin,
+        refreshUser,
       }}
     >
       {children}

@@ -13,6 +13,8 @@
     "@prisma/client": "^7.2.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query": "^5.81.5",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "lucide-react": "^0.562.0",
     "next": "^15.5.9",
     "postcss": "^8.5.6",

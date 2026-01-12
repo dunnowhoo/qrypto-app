@@ -11,11 +11,123 @@ datasource db {
 }
 
 model User {
+  id           String        @id @default(cuid())
+  address      String        @unique
+  fullName     String?
+  email        String?
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+// Transaction types
+enum TransactionType {
+  QRIS_PAYMENT  // User pays QRIS with crypto
+  RECEIVE       // User receives crypto
+  SEND          // User sends crypto
+  SWAP          // Token swap
+  TOP_UP        // Fiat to crypto
+}
+
+// Transaction status
+enum TransactionStatus {
+  PENDING       // Created, awaiting crypto transfer
+  PROCESSING    // Crypto received, processing fiat payment
+  SUCCESS       // Completed successfully
+  FAILED        // Failed
+  EXPIRED       // Payment timeout
+  REFUNDED      // Refunded to user
+}
+
+model Transaction {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  
+  type           TransactionType
+  status         TransactionStatus @default(PENDING)
+  
+  // Crypto side
+  cryptoAmount   Decimal           @db.Decimal(36, 18)
+  cryptoCurrency String            @default("IDRX") // IDRX, USDC, ETH
+  txHash         String?           // Blockchain transaction hash
+  fromAddress    String?           // Sender wallet address
+  toAddress      String?           // Receiver wallet address (QRypto treasury)
+  networkFee     Decimal?          @db.Decimal(36, 18)
+  
+  // Fiat side (for QRIS payments)
+  fiatAmount     Decimal?          @db.Decimal(20, 2)
+  fiatCurrency   String?           @default("IDR")
+  
+  // QRIS specific
+  qrisPayment    QrisPayment?
+  
+  // Metadata
+  description    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  completedAt    DateTime?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([txHash])
+}
+
+model QrisPayment {
+  id              String      @id @default(cuid())
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  
+  // QRIS Data
+  qrisRaw         String      // Original QRIS string
+  merchantName    String
+  merchantCity    String?
+  merchantId      String?
+  terminalId      String?
+  
+  // Payment Gateway
+  paymentGateway  String?     // "xendit", "oy", "durianpay"
+  gatewayRefId    String?     // Reference ID from payment gateway
+  gatewayStatus   String?     // Status from payment gateway
+  gatewayResponse Json?       // Full response from gateway
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  paidAt          DateTime?   // When fiat payment was made to merchant
+  
+  @@index([merchantId])
+  @@index([gatewayRefId])
+}
+
+// QRypto Treasury Wallet for receiving crypto payments
+model TreasuryWallet {
   id        String   @id @default(cuid())
   address   String   @unique
-  fullName  String?
-  email     String?
-  phone     String?
+  network   String   // "base", "ethereum", "polygon"
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+}
+
+// Merchant Mapping for QRIS -> Bank Account (Demo/Hackathon Strategy)
+// Maps NMID or merchant name to actual bank account for Xendit disbursement
+model MerchantMap {
+  id            String   @id @default(cuid())
+  
+  // QRIS Identification (at least one required)
+  nmid          String?  @unique  // National Merchant ID from QRIS (e.g., "ID1026471004881")
+  merchantName  String?           // Fallback: match by name (e.g., "JejaKriya")
+  
+  // Bank Account for Xendit Disbursement
+  bankCode      String            // Xendit bank code: "BCA", "MANDIRI", "BNI", "BRI", etc.
+  accountNumber String            // Bank account number
+  accountName   String            // Account holder name (for verification)
+  
+  // Metadata
+  isActive      Boolean  @default(true)
+  description   String?           // Notes about this merchant
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([merchantName])
 }

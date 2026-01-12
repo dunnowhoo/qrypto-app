@@ -25,26 +25,41 @@ export default function RegisterPage() {
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isNewUser, user, updateProfile, refreshUser } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Redirect if already authenticated
+  // If authenticated and not new user, redirect to home
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isNewUser && user?.fullName) {
       router.push("/");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isNewUser, user, router]);
+
+  // If already authenticated (new user completing profile), show form immediately
+  useEffect(() => {
+    if (isAuthenticated && isNewUser) {
+      setShowProfileForm(true);
+      // Pre-fill form with existing data
+      if (user) {
+        setFormData({
+          fullName: user.fullName || "",
+          email: user.email || "",
+          phone: user.phone || "",
+        });
+      }
+    }
+  }, [isAuthenticated, isNewUser, user]);
 
   // Handle wallet connection - show profile form
   useEffect(() => {
     if (isConnected && address && !isAuthenticated) {
       setShowProfileForm(true);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, isAuthenticated]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -70,7 +85,14 @@ export default function RegisterPage() {
       setLoading(true);
       setError("");
 
-      // Sign message for verification
+      // If already authenticated (completing profile), use updateProfile
+      if (isAuthenticated) {
+        await updateProfile(formData);
+        router.push("/");
+        return;
+      }
+
+      // New user - sign message for verification
       const message = `Register with QRypto\n\nAddress: ${address}\nName: ${formData.fullName}\nTimestamp: ${Date.now()}`;
       const signature = await signMessageAsync({ message });
 
@@ -97,10 +119,32 @@ export default function RegisterPage() {
         });
 
         if (loginResponse.ok) {
+          await refreshUser();
           router.push("/");
         }
       } else {
-        setError(data.error || "Registration failed");
+        // If user already exists, update their profile instead
+        if (response.status === 409) {
+          const updateResponse = await fetch("/api/auth/update-profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              address,
+              fullName: formData.fullName,
+              email: formData.email,
+              phone: formData.phone,
+            }),
+          });
+          
+          if (updateResponse.ok) {
+            await refreshUser();
+            router.push("/");
+          } else {
+            setError("Failed to update profile");
+          }
+        } else {
+          setError(data.error || "Registration failed");
+        }
       }
     } catch (err) {
       console.error("Registration error:", err);
@@ -143,9 +187,11 @@ export default function RegisterPage() {
 
               <div className="text-center">
                 <h1 className="text-[#101828] text-3xl font-normal mb-1 tracking-[0.4px]">
-                  Create Account
+                  {isAuthenticated && isNewUser ? "Complete Profile" : "Create Account"}
                 </h1>
-                <p className="text-[#4a5565] text-base tracking-[-0.31px]">Join QRypto today</p>
+                <p className="text-[#4a5565] text-base tracking-[-0.31px]">
+                  {isAuthenticated && isNewUser ? "Tell us a bit about yourself" : "Join QRypto today"}
+                </p>
               </div>
             </div>
           </div>
@@ -181,11 +227,13 @@ export default function RegisterPage() {
                 {/* Wallet Info */}
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                   <p className="text-green-600 text-sm font-medium mb-1">Wallet Connected ✓</p>
-                  <p className="text-green-700 text-xs truncate">{address}</p>
+                  <p className="text-green-700 text-xs truncate">{address || user?.address}</p>
                 </div>
 
                 <p className="text-[#4a5565] text-sm text-center -mt-2">
-                  Complete your profile to finish registration
+                  {isAuthenticated && isNewUser 
+                    ? "Complete your profile to continue" 
+                    : "Complete your profile to finish registration"}
                 </p>
 
                 {/* Full Name Input */}
@@ -240,7 +288,7 @@ export default function RegisterPage() {
                   disabled={loading}
                   className="w-full h-15 bg-[#155dfc] rounded-2xl shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)] text-white text-lg tracking-[-0.44px] hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {loading ? "Creating Account..." : "Create Account"}
+                  {loading ? "Saving..." : (isAuthenticated && isNewUser ? "Save Profile" : "Create Account")}
                 </button>
               </>
             )}
