@@ -31,7 +31,7 @@ const SettingItem = ({
   href,
   onClick,
 }: {
-  icon: any;
+  icon: React.ElementType;
   iconBg: string;
   title: string;
   subtitle: string;

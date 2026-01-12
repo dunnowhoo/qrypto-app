@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Mail, Phone, ChevronLeft } from "lucide-react";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
-import { Avatar, Name, Identity, Address } from "@coinbase/onchainkit/identity";
 import { useAccount, useSignMessage } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 
