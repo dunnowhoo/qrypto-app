@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String        @id @default(uuid())
+  walletAddress    String        @unique
+  kycStatus        KycStatus     @default(PENDING)
+  encryptedApiKey  String?
+  encryptedSecretKey String?
+  createdAt        DateTime      @default(now())
+  
+  bankAccounts     BankAccount[]
+  transactions     Transaction[]
+}
+
+model BankAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  bankCode          String
+  bankAccountNumber String
+  createdAt         DateTime      @default(now())
+  
+  user              User          @relation(fields: [userId], references: [id])
+  transactions      Transaction[]
+  merchants         Merchant[]
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  userId          String
+  bankAccountId   String?
+  amount          Float
+  status          TransactionStatus @default(PENDING)
+  type            TransactionType
+  merchantId      String?
+  createdAt       DateTime          @default(now())
+  completedAt     DateTime?
+  
+  user            User              @relation(fields: [userId], references: [id])
+  bankAccount     BankAccount?      @relation(fields: [bankAccountId], references: [id])
+}
+
+model Merchant {
+  id              String      @id @default(uuid())
+  merchantId      String      @unique
+  name            String
+  bankAccountId   String
+  defaultAmount   Float
+  
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id])
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionType {
+  MANUAL
+  QRIS
+}
