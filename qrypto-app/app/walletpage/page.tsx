@@ -18,7 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import BottomNavbar from "../components/BottomNavbar";
 import { ChevronLeft, Eye, Send, ArrowDownToLine, TrendingUp, TrendingDown, X, Copy, Check, Plus } from "lucide-react";
 import { formatUnits } from "viem";
-import { base } from "wagmi/chains";
+import { base, mainnet } from "wagmi/chains";
 
 // Token configurations with contract addresses on Base
 const TOKENS = [
@@ -65,11 +65,12 @@ const ERC20_ABI = [
   },
 ] as const;
 
-// IDR exchange rate (mock - in production, fetch from API)
+// IDR exchange rate - Updated to current market rates
+// 1 USD ≈ 16,000 IDR
 const IDR_RATES: Record<string, number> = {
-  ETH: 50000000, // 1 ETH = 50,000,000 IDR
+  ETH: 43200000, // 1 ETH ≈ $2,700 × 16,000 = 43,200,000 IDR
   USDC: 16000, // 1 USDC = 16,000 IDR
-  MATIC: 1200, // 1 MATIC = 1,200 IDR
+  MATIC: 12800, // 1 MATIC ≈ $0.80 × 16,000 = 12,800 IDR  
   IDRX: 1, // 1 IDRX = 1 IDR
 };
 
@@ -117,11 +118,16 @@ export default function WalletPage() {
   // ONCHAIN DATA FETCHING - Using Wagmi hooks to fetch real blockchain data
   // ═══════════════════════════════════════════════════════════════════
 
-  // Fetch native ETH balance from Base network
-  // This queries the blockchain and returns real-time balance
-  const { data: ethBalance, isLoading: ethLoading } = useBalance({
+  // Fetch native ETH balance from Ethereum Mainnet (where your 0.00437 ETH is)
+  const { data: ethBalanceMainnet, isLoading: ethMainnetLoading } = useBalance({
     address: address,
-    chainId: base.id,
+    chainId: mainnet.id, // Ethereum Mainnet (chain ID 1)
+  });
+
+  // Fetch native ETH balance from Base network
+  const { data: ethBalanceBase, isLoading: ethBaseLoading } = useBalance({
+    address: address,
+    chainId: base.id, // Base (chain ID 8453)
   });
 
   // Fetch USDC token balance from Base network
@@ -135,7 +141,7 @@ export default function WalletPage() {
   // Calculate balances and convert to IDR
   // This effect updates whenever blockchain data changes
   useEffect(() => {
-    setIsLoading(ethLoading || usdcLoading);
+    setIsLoading(ethMainnetLoading || ethBaseLoading || usdcLoading);
     
     if (!isConnected || !address) {
       setTokenBalances([]);
@@ -146,27 +152,46 @@ export default function WalletPage() {
     const balances: TokenBalance[] = [];
     let total = 0;
 
-    // ETH Balance - FETCHED FROM BLOCKCHAIN
-    if (ethBalance) {
-      const ethAmount = parseFloat(formatUnits(ethBalance.value, ethBalance.decimals));
+    // ETH Balance from Ethereum Mainnet - This is where your 0.00437 ETH is
+    if (ethBalanceMainnet && ethBalanceMainnet.value > 0n) {
+      const ethAmount = parseFloat(formatUnits(ethBalanceMainnet.value, ethBalanceMainnet.decimals));
       const ethValueIDR = ethAmount * IDR_RATES.ETH;
       balances.push({
         name: "Ethereum",
         symbol: "ETH",
-        balance: ethBalance.value.toString(),
-        balanceFormatted: ethAmount.toFixed(4),
+        balance: ethBalanceMainnet.value.toString(),
+        balanceFormatted: ethAmount.toFixed(8), // Show full precision
+        valueIDR: ethValueIDR,
+        logo: "◆",
+        network: "Ethereum",
+        color: "bg-gray-100",
+        textColor: "text-gray-900",
+        priceChange: -3.8,
+      });
+      total += ethValueIDR;
+    }
+
+    // ETH Balance from Base network (separate entry)
+    if (ethBalanceBase && ethBalanceBase.value > 0n) {
+      const ethAmount = parseFloat(formatUnits(ethBalanceBase.value, ethBalanceBase.decimals));
+      const ethValueIDR = ethAmount * IDR_RATES.ETH;
+      balances.push({
+        name: "Ethereum",
+        symbol: "ETH",
+        balance: ethBalanceBase.value.toString(),
+        balanceFormatted: ethAmount.toFixed(8),
         valueIDR: ethValueIDR,
         logo: "◆",
         network: "Base",
-        color: "bg-gray-100",
-        textColor: "text-gray-900",
-        priceChange: 3.8,
+        color: "bg-blue-100",
+        textColor: "text-blue-600",
+        priceChange: -3.8,
       });
       total += ethValueIDR;
     }
 
     // USDC Balance - FETCHED FROM BLOCKCHAIN
-    if (usdcBalance) {
+    if (usdcBalance && usdcBalance.value > 0n) {
       const usdcAmount = parseFloat(formatUnits(usdcBalance.value, usdcBalance.decimals));
       const usdcValueIDR = usdcAmount * IDR_RATES.USDC;
       balances.push({
@@ -177,8 +202,8 @@ export default function WalletPage() {
         valueIDR: usdcValueIDR,
         logo: "💵",
         network: "Base",
-        color: "bg-blue-100",
-        textColor: "text-blue-600",
+        color: "bg-green-100",
+        textColor: "text-green-600",
         priceChange: -0.1,
       });
       total += usdcValueIDR;
@@ -190,7 +215,7 @@ export default function WalletPage() {
     // 3. Add to balances array with real onchain data
     
     // Mock IDRX and MATIC for demo (replace with actual onchain data)
-    if (!ethBalance || !usdcBalance) {
+    if (!ethBalanceMainnet && !ethBalanceBase && !usdcBalance) {
       // Only show mock data if no real data loaded yet
       balances.unshift({
         name: "Indonesian Rupiah X",
@@ -222,7 +247,7 @@ export default function WalletPage() {
 
     setTokenBalances(balances);
     setTotalBalanceIDR(total);
-  }, [ethBalance, usdcBalance, isConnected, address, ethLoading, usdcLoading]);
+  }, [ethBalanceMainnet, ethBalanceBase, usdcBalance, isConnected, address, ethMainnetLoading, ethBaseLoading, usdcLoading]);
 
   const formatIDR = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
