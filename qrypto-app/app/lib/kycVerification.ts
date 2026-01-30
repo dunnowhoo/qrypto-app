@@ -1,5 +1,5 @@
 import { prisma } from "@/app/lib/prisma";
-import { decryptData } from "./encryption";
+import { decryptData } from "../../lib/encryption";
 
 export interface UserWithKeys {
   id: string;
