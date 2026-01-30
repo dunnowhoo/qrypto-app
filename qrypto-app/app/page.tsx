@@ -167,9 +167,16 @@ export default function Home() {
               >
                 {getInitials(user?.fullName)}
               </div>
-              <div className="absolute -bottom-1 left-3 bg-[#00c950] text-white text-[10px] px-2 py-0.5 rounded-full border-2 border-white font-medium tracking-wide">
-                KYC
-              </div>
+              {user?.kycStatus === 'APPROVED' && (
+                <div className="absolute -bottom-1 left-3 bg-[#00c950] text-white text-[10px] px-2 py-0.5 rounded-full border-2 border-white font-medium tracking-wide">
+                  KYC
+                </div>
+              )}
+              {user?.kycStatus === 'PENDING' && (
+                <div className="absolute -bottom-1 left-3 bg-[#f59e0b] text-white text-[10px] px-2 py-0.5 rounded-full border-2 border-white font-medium tracking-wide">
+                  PENDING
+                </div>
+              )}
             </div>
             <div>
               <p className="text-[#6a7282] text-sm tracking-[-0.15px]">Welcome back</p>

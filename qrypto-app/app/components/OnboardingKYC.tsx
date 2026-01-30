@@ -9,11 +9,14 @@ export default function OnboardingKYC() {
   const { address } = useAccount();
   const { markOnboardingComplete } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useExistingKeys, setUseExistingKeys] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     fullname: "",
     address: "",
     idNumber: "",
+    apiKey: "",
+    apiSecret: "",
   });
   const [idFile, setIdFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +57,19 @@ export default function OnboardingKYC() {
       return;
     }
 
-    if (!idFile) {
-      setError("Please upload your ID file");
-      return;
+    // Validate based on mode
+    if (useExistingKeys) {
+      // For existing keys mode, only require API keys
+      if (!formData.apiKey || !formData.apiSecret) {
+        setError("Please enter both API Key and API Secret");
+        return;
+      }
+    } else {
+      // For new account mode, require ID file
+      if (!idFile) {
+        setError("Please upload your ID file");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -68,8 +81,18 @@ export default function OnboardingKYC() {
       submitData.append("fullname", formData.fullname);
       submitData.append("address", formData.address);
       submitData.append("idNumber", formData.idNumber);
-      submitData.append("idFile", idFile);
       submitData.append("walletAddress", address);
+      
+      // Add API keys if using existing keys
+      if (useExistingKeys) {
+        submitData.append("apiKey", formData.apiKey);
+        submitData.append("apiSecret", formData.apiSecret);
+      } else {
+        // Add ID file for new account
+        if (idFile) {
+          submitData.append("idFile", idFile);
+        }
+      }
 
       const response = await fetch("/api/auth/onboarding", {
         method: "POST",
@@ -79,7 +102,13 @@ export default function OnboardingKYC() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to submit onboarding");
+        // Check if error is about duplicate email
+        if (response.status === 409 && data.code === 'EMAIL_ALREADY_EXISTS') {
+          setError(data.error + " " + (data.details || ""));
+        } else {
+          setError(data.error || "Failed to submit onboarding");
+        }
+        return;
       }
 
       // Mark onboarding as complete
@@ -166,52 +195,116 @@ export default function OnboardingKYC() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                ID File
+            {/* Toggle between new account and existing keys */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useExistingKeys}
+                  onChange={(e) => setUseExistingKeys(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  I already have an IDRX account and API keys
+                </span>
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-                <div className="space-y-1 text-center">
-                  {idFile ? (
-                    <div className="text-sm text-gray-600">
-                      <p className="font-medium">{idFile.name}</p>
-                      <p className="text-xs">{(idFile.size / 1024).toFixed(2)} KB</p>
-                    </div>
-                  ) : (
-                    <>
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                      >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <div className="text-sm text-gray-600">
-                        <label className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500">
-                          <span>Upload a file</span>
-                          <input
-                            type="file"
-                            className="sr-only"
-                            onChange={handleFileChange}
-                            accept="image/jpeg,image/png,image/jpg,image/webp"
-                            required
-                          />
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        PNG, JPG, WEBP up to 5MB
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
             </div>
+
+            {/* Conditional rendering based on mode */}
+            {useExistingKeys ? (
+              <>
+                {/* API Keys Input */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 mb-3">
+                    <strong>Note:</strong> Enter your existing IDRX API credentials. You can find these in your IDRX dashboard.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        IDRX API Key
+                      </label>
+                      <input
+                        type="text"
+                        name="apiKey"
+                        value={formData.apiKey}
+                        onChange={handleInputChange}
+                        required={useExistingKeys}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                        placeholder="your-api-key-here"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        IDRX API Secret
+                      </label>
+                      <input
+                        type="password"
+                        name="apiSecret"
+                        value={formData.apiSecret}
+                        onChange={handleInputChange}
+                        required={useExistingKeys}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                        placeholder="your-api-secret-here"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* ID File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ID File
+                  </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                    <div className="space-y-1 text-center">
+                      {idFile ? (
+                        <div className="text-sm text-gray-600">
+                          <p className="font-medium">{idFile.name}</p>
+                          <p className="text-xs">{(idFile.size / 1024).toFixed(2)} KB</p>
+                        </div>
+                      ) : (
+                        <>
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <div className="text-sm text-gray-600">
+                            <label className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500">
+                              <span>Upload a file</span>
+                              <input
+                                type="file"
+                                className="sr-only"
+                                onChange={handleFileChange}
+                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                required={!useExistingKeys}
+                              />
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, WEBP up to 5MB
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Error message */}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">

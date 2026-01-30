@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/app/lib/prisma";
 import { decryptData } from "./encryption";
 
 export interface UserWithKeys {

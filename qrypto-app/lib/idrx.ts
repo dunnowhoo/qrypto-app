@@ -97,7 +97,13 @@ export async function onboardUser(data: OnboardingData): Promise<OnboardingRespo
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to onboard user: ${response.status}`);
+    const errorData = await response.json().catch(() => ({}));
+    console.error('IDRX Onboarding Error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorData
+    });
+    throw new Error(`Failed to onboard user: ${response.status} - ${errorData.message || response.statusText}`);
   }
 
   return response.json();

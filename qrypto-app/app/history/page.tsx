@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 import BottomNavbar from "../components/BottomNavbar";
 import { ArrowLeft, Calendar, Filter } from "lucide-react";
@@ -24,8 +23,7 @@ type TransactionType = 'MINT' | 'BURN' | 'BRIDGE' | 'DEPOSIT_REDEEM';
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { address } = useAccount();
-  const { isAuthenticated, needsOnboarding } = useAuth();
+  const { isAuthenticated, needsOnboarding, user } = useAuth();
   
   const [selectedType, setSelectedType] = useState<TransactionType>('BURN');
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
@@ -54,14 +52,14 @@ export default function HistoryPage() {
   // Fetch transaction history
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!address) return;
+      if (!user?.walletAddress) return;
       
       try {
         setLoading(true);
         setError(null);
         
         const params = new URLSearchParams({
-          walletAddress: address,
+          walletAddress: user.walletAddress,
           transactionType: selectedType,
           page: currentPage.toString(),
           take: '10',
@@ -86,10 +84,10 @@ export default function HistoryPage() {
       }
     };
 
-    if (isAuthenticated && !needsOnboarding) {
+    if (isAuthenticated && !needsOnboarding && user) {
       fetchHistory();
     }
-  }, [address, selectedType, currentPage, isAuthenticated, needsOnboarding]);
+  }, [user, selectedType, currentPage, isAuthenticated, needsOnboarding]);
 
   const getStatusBadge = (record: TransactionRecord) => {
     let status = '';
@@ -138,36 +136,49 @@ export default function HistoryPage() {
 
   if (loading && transactions.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading transaction history...</p>
+      <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-white relative max-w-[480px] mx-auto flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading transaction history...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-24">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => router.push("/")}
-            className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Transaction History</h1>
-            <p className="text-sm text-gray-600">
-              {totalCount} total transaction{totalCount !== 1 ? 's' : ''}
-            </p>
-          </div>
+    <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-white relative overflow-hidden max-w-[480px] mx-auto pb-20">
+        {/* Background Decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -left-20 top-0 w-64 h-64 bg-[rgba(219,234,254,0.3)] rounded-full blur-3xl" />
+          <div className="absolute left-52 top-96 w-80 h-80 bg-[rgba(206,250,254,0.3)] rounded-full blur-3xl" />
         </div>
 
-        {/* Transaction Type Filter */}
-        <div className="bg-white rounded-xl shadow-md p-4 mb-6">
+        <div className="relative">
+          {/* Header */}
+          <div className="relative h-32 bg-gradient-to-br from-[#155dfc] to-[#0092b8]">
+            <div className="absolute top-6 left-6">
+              <button
+                onClick={() => router.push("/")}
+                className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+            </div>
+            
+            <div className="absolute bottom-6 left-6">
+              <h1 className="text-white text-2xl font-semibold">Transaction History</h1>
+              <p className="text-white/80 text-sm mt-1">
+                {totalCount} total transaction{totalCount !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="px-6 mt-6">{/* Transaction Type Filter */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="w-5 h-5 text-gray-600" />
             <h2 className="font-semibold text-gray-900">Transaction Type</h2>
@@ -180,9 +191,9 @@ export default function HistoryPage() {
                   setSelectedType(type.value);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-4 py-2 rounded-xl font-medium transition-all ${
                   selectedType === type.value
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-[#155dfc] to-[#0092b8] text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -194,15 +205,15 @@ export default function HistoryPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6">
             {error}
           </div>
         )}
 
         {/* Transaction List */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {transactions.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-md p-8 text-center">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
               <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">No transactions found</p>
               <p className="text-sm text-gray-500 mt-2">
@@ -213,7 +224,7 @@ export default function HistoryPage() {
             transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow"
+                className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 hover:shadow-xl transition-shadow"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -261,25 +272,27 @@ export default function HistoryPage() {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-white rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-shadow"
+              className="px-4 py-2 bg-white rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-shadow"
             >
               Previous
             </button>
-            <span className="px-4 py-2 bg-white rounded-lg shadow-md">
+            <span className="px-4 py-2 bg-white rounded-xl shadow-md font-medium">
               Page {currentPage} of {metadata.pageCount}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(metadata.pageCount, p + 1))}
               disabled={currentPage === metadata.pageCount}
-              className="px-4 py-2 bg-white rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-started hover:shadow-lg transition-shadow"
+              className="px-4 py-2 bg-white rounded-xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-shadow"
             >
               Next
             </button>
           </div>
         )}
       </div>
+        </div>
 
       <BottomNavbar />
+      </div>
     </div>
   );
 }

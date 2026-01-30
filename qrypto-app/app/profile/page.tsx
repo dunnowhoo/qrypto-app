@@ -69,8 +69,8 @@ export default function ProfilePage() {
   };
 
   const copyAddress = () => {
-    if (user?.address) {
-      navigator.clipboard.writeText(user.address);
+    if (user?.walletAddress) {
+      navigator.clipboard.writeText(user.walletAddress);
     }
   };
 
@@ -146,10 +146,16 @@ export default function ProfilePage() {
                 >
                   <Edit className="w-5 h-5 text-white" />
                 </button>
-                {user.fullName && (
+                {user.kycStatus === 'APPROVED' && (
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#00c950] border-2 border-white rounded-full px-3.5 py-1 shadow-lg flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-white" />
                     <span className="text-white text-xs font-medium">Verified</span>
+                  </div>
+                )}
+                {user.kycStatus === 'PENDING' && (
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#f59e0b] border-2 border-white rounded-full px-3.5 py-1 shadow-lg flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white text-xs font-medium">KYC Pending</span>
                   </div>
                 )}
               </div>
@@ -267,7 +273,7 @@ export default function ProfilePage() {
                 </button>
               </div>
               <p className="text-[#101828] text-sm font-mono break-all">
-                {user.address}
+                {user.walletAddress}
               </p>
             </div>
           </div>

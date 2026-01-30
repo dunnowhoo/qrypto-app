@@ -297,10 +297,12 @@ export default function TransferPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading banks...</p>
+      <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-white relative max-w-[480px] mx-auto flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading banks...</p>
+          </div>
         </div>
       </div>
     );
@@ -308,44 +310,59 @@ export default function TransferPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+      <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-white relative max-w-[480px] mx-auto flex items-center justify-center p-6">
+          <div className="w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              Transfer Request Submitted!
+            </h1>
+            <p className="text-gray-600 mb-4">
+              Your transfer request has been submitted successfully. The balance will be processed and credited to your bank account within 24 hours.
+            </p>
+            <button
+              onClick={() => router.push("/history")}
+              className="w-full bg-gradient-to-r from-[#155dfc] to-[#0092b8] text-white py-3 rounded-xl font-medium hover:shadow-lg transition-all"
+            >
+              View Transaction History
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">
-            Transfer Request Submitted!
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Your transfer request has been submitted successfully. The balance will be processed and credited to your bank account within 24 hours.
-          </p>
-          <button
-            onClick={() => router.push("/history")}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-600 transition-all"
-          >
-            View Transaction History
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-2xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => router.push("/")}
-            className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Transfer to Bank</h1>
-            <p className="text-sm text-gray-600">Redeem IDRX to your bank account</p>
-          </div>
+    <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-white relative overflow-hidden max-w-[480px] mx-auto pb-20">
+        {/* Background Decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -left-20 top-0 w-64 h-64 bg-[rgba(219,234,254,0.3)] rounded-full blur-3xl" />
+          <div className="absolute left-52 top-96 w-80 h-80 bg-[rgba(206,250,254,0.3)] rounded-full blur-3xl" />
         </div>
+
+        <div className="relative">
+          {/* Header */}
+          <div className="relative h-32 bg-gradient-to-br from-[#155dfc] to-[#0092b8]">
+            <div className="absolute top-6 left-6">
+              <button
+                onClick={() => router.push("/")}
+                className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+            </div>
+            
+            <div className="absolute bottom-6 left-6">
+              <h1 className="text-white text-2xl font-semibold">Transfer to Bank</h1>
+              <p className="text-white/80 text-sm mt-1">Redeem IDRX to your bank account</p>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="px-6 mt-6">
 
         {/* Info Banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
@@ -542,6 +559,7 @@ export default function TransferPage() {
           </div>
         </div>
       </div>
+        </div>
 
       {/* Loading Overlay */}
       {loadingState.stage !== 'idle' && (
