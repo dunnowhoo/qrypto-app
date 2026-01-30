@@ -24,19 +24,25 @@ export default function RegisterPage() {
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { isAuthenticated, isNewUser, user, updateProfile, refreshUser } = useAuth();
+  const { isAuthenticated, isNewUser, user, updateProfile, refreshUser, needsOnboarding } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // If authenticated and not new user, redirect to home
+  // Redirect logic based on user state
   useEffect(() => {
     if (isAuthenticated && !isNewUser && user?.fullName) {
-      router.push("/");
+      // If user has completed profile but needs onboarding, redirect to onboarding
+      if (needsOnboarding) {
+        router.push("/onboarding");
+      } else {
+        // Otherwise redirect to home
+        router.push("/");
+      }
     }
-  }, [isAuthenticated, isNewUser, user, router]);
+  }, [isAuthenticated, isNewUser, user, needsOnboarding, router]);
 
   // If already authenticated (new user completing profile), show form immediately
   useEffect(() => {
@@ -119,7 +125,8 @@ export default function RegisterPage() {
 
         if (loginResponse.ok) {
           await refreshUser();
-          router.push("/");
+          // Redirect to onboarding for KYC
+          router.push("/onboarding");
         }
       } else {
         // If user already exists, update their profile instead
@@ -137,7 +144,8 @@ export default function RegisterPage() {
           
           if (updateResponse.ok) {
             await refreshUser();
-            router.push("/");
+            // Redirect to onboarding for KYC
+            router.push("/onboarding");
           } else {
             setError("Failed to update profile");
           }

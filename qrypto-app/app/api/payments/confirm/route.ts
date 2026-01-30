@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { parseQRIS, getMerchantIdentifier } from "../../../lib/qrisParser";
 import { processDisbursement, XenditBankCode } from "../../../lib/xendit";
+import { requireKYC } from "../../../lib/kycVerification";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { paymentId, txHash } = body;
+    const { paymentId, txHash, walletAddress } = body;
 
     // Validate required fields
     if (!paymentId || !txHash) {
@@ -14,6 +15,20 @@ export async function POST(request: NextRequest) {
         { error: "Missing required fields: paymentId, txHash" },
         { status: 400 }
       );
+    }
+
+    // Check KYC status
+    if (walletAddress) {
+      const kycCheck = await requireKYC(walletAddress);
+      if (!kycCheck.success) {
+        return NextResponse.json(
+          { 
+            error: kycCheck.error,
+            requiresKYC: true,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Validate transaction hash format

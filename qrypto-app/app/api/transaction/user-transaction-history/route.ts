@@ -1,48 +1,110 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { BANK_LIST } from "@/lib/const";
+import { NextRequest, NextResponse } from "next/server";
+import { getUserTransactionHistory } from "@/lib/idrx";
+import { requireKYC } from "@/lib/kycVerification";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
+    
+    // Get wallet address for authentication
     const walletAddress = searchParams.get("walletAddress");
-
     if (!walletAddress) {
-      return NextResponse.json({ error: "Wallet address required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Wallet address is required" },
+        { status: 400 }
+      );
     }
 
-    const user = await db.user.findUnique({
-      where: { walletAddress }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // Verify KYC and get user's API keys
+    const kycCheck = await requireKYC(walletAddress);
+    if (!kycCheck.success || !kycCheck.user) {
+      return NextResponse.json(
+        { 
+          error: kycCheck.error || "KYC verification failed",
+          requiresKYC: true,
+        },
+        { status: 403 }
+      );
     }
 
-    const transactions = await db.transaction.findMany({
-      where: { userId: user.id },
-      include: {
-        bankAccount: true
-      },
-      orderBy: { createdAt: "desc" }
-    });
+    // Get required parameters
+    const transactionType = searchParams.get("transactionType");
+    const page = searchParams.get("page");
+    const take = searchParams.get("take");
 
-    // Enrich transactions with bank names
-    const enrichedTransactions = transactions.map(transaction => {
-      let bankName = "Unknown Bank";
-      if (transaction.bankAccount) {
-        const bankInfo = BANK_LIST.find(bank => bank.bankCode === transaction.bankAccount!.bankCode);
-        bankName = bankInfo?.bankName || "Unknown Bank";
+    if (!transactionType || !page || !take) {
+      return NextResponse.json(
+        { error: "transactionType, page, and take are required" },
+        { status: 400 }
+      );
+    }
+
+    // Build params object
+    const params: any = {
+      transactionType,
+      page: parseInt(page),
+      take: parseInt(take),
+    };
+
+    // Add optional parameters
+    const optionalParams = [
+      'userMintStatus', 'paymentStatus', 'burnStatus', 'bridgeStatus',
+      'merchantOrderId', 'originChainId', 'destinationChainId',
+      'amountMax', 'amountMin', 'txHash', 'orderByDate', 'orderByAmount',
+      'transferTxHash', 'burnTxHash'
+    ];
+
+    optionalParams.forEach(param => {
+      const value = searchParams.get(param);
+      if (value) {
+        params[param] = ['originChainId', 'destinationChainId'].includes(param) 
+          ? parseInt(value) 
+          : value;
       }
-
-      return {
-        ...transaction,
-        bankName
-      };
     });
 
-    return NextResponse.json({ transactions: enrichedTransactions });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Get transaction history using user's API keys
+    const response = await getUserTransactionHistory(
+      kycCheck.user.apiKey!,
+      kycCheck.user.apiSecret!,
+      params
+    );
+
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Get transaction history error:", error);
+    
+    const err = error as any;
+    
+    if (err.message?.includes('KYC') || err.message?.includes('not found')) {
+      return NextResponse.json(
+        { 
+          error: 'KYC verification required', 
+          code: 'KYC_REQUIRED',
+          details: 'Please complete KYC verification to view history'
+        },
+        { status: 403 }
+      );
+    }
+    
+    if (err.response?.status === 401) {
+      return NextResponse.json(
+        { 
+          error: 'Authentication failed', 
+          code: 'AUTH_FAILED',
+          details: 'Invalid API credentials'
+        },
+        { status: 401 }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch transaction history', 
+        code: 'FETCH_FAILED',
+        details: err.message || 'Unable to retrieve transaction history'
+      },
+      { status: 500 }
+    );
   }
 }

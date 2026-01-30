@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     // Find or create user
     let user = await prisma.user.findUnique({
-      where: { address: address.toLowerCase() },
+      where: { walletAddress: address.toLowerCase() },
     });
 
     let isNewUser = false;
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       // Create new user if doesn't exist
       user = await prisma.user.create({
         data: {
-          address: address.toLowerCase(),
+          walletAddress: address.toLowerCase(),
         },
       });
       isNewUser = true;
@@ -32,15 +32,21 @@ export async function POST(request: NextRequest) {
       isNewUser = !user.fullName;
     }
 
+    // Check if user needs onboarding (KYC)
+    const needsOnboarding = !user.kycStatus || user.kycStatus === 'PENDING';
+
     return NextResponse.json({
       success: true,
       isNewUser,
+      needsOnboarding,
       user: {
         id: user.id,
+        walletAddress: user.walletAddress,
         address: user.address,
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        kycStatus: user.kycStatus,
         createdAt: user.createdAt,
       },
     });

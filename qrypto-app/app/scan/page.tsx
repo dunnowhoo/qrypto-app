@@ -21,19 +21,21 @@ const QRScanner = dynamic(() => import("../components/QRScanner"), {
 
 export default function ScanPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding, user } = useAuth();
   const [showScanner, setShowScanner] = useState(true);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated or needs onboarding
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
+    } else if (!isLoading && isAuthenticated && needsOnboarding) {
+      router.push("/onboarding");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, needsOnboarding, router]);
 
   const handleQRScan = async (result: string) => {
     setIsProcessing(true);

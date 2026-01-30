@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   
   const { address, isConnected } = useAccount();
-  const { signAndLogin, isAuthenticated, isNewUser } = useAuth();
+  const { signAndLogin, isAuthenticated, isNewUser, needsOnboarding } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -29,11 +29,15 @@ export default function LoginPage() {
       if (isNewUser) {
         // New user needs to complete profile
         router.push("/register");
+      } else if (needsOnboarding) {
+        // User has profile but needs onboarding (KYC)
+        router.push("/onboarding");
       } else {
+        // Fully onboarded user
         router.push("/");
       }
     }
-  }, [isAuthenticated, isNewUser, router]);
+  }, [isAuthenticated, isNewUser, needsOnboarding, router]);
 
   const handleWalletLogin = async () => {
     if (loading) return; // Prevent double execution
@@ -47,6 +51,9 @@ export default function LoginPage() {
       if (newUser) {
         router.push("/register");
       } else {
+        // Check if user needs onboarding after successful login
+        // This will be handled by the useEffect above that checks needsOnboarding
+        // Just redirect to home and let the effect handle it
         router.push("/");
       }
     } catch (err) {

@@ -1,124 +1,118 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { decrypt } from "@/lib/crypto";
-import { generateIdrxHeaders } from "@/lib/idrx";
+import { NextRequest, NextResponse } from "next/server";
+import { submitRedeemRequest } from "@/lib/idrx";
+import { requireKYC } from "@/lib/kycVerification";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { walletAddress, bankAccountId, amount } = await request.json();
+    const body = await request.json();
+    const {
+      txHash,
+      networkChainId,
+      amountTransfer,
+      bankAccount,
+      bankCode,
+      bankName,
+      bankAccountName,
+      walletAddress,
+      notes,
+    } = body;
 
-    if (!walletAddress || !bankAccountId || !amount) {
+    // Validate required fields
+    if (!txHash || !networkChainId || !amountTransfer || !bankAccount || 
+        !bankCode || !bankName || !bankAccountName || !walletAddress) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // Validate amount is a positive number
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    // Verify KYC and get user's API keys
+    const kycCheck = await requireKYC(walletAddress);
+    if (!kycCheck.success || !kycCheck.user) {
       return NextResponse.json(
-        { error: "Amount must be a positive number" },
-        { status: 400 },
-      );
-    }
-
-    // Get user and decrypt credentials
-    const user = await db.user.findUnique({
-      where: { walletAddress },
-    });
-
-    if (!user || !user.encryptedApiKey || !user.encryptedSecretKey) {
-      return NextResponse.json(
-        { error: "User not found or KYC not completed" },
-        { status: 404 },
-      );
-    }
-
-    // Get bank account
-    const bankAccount = await db.bankAccount.findFirst({
-      where: {
-        id: bankAccountId,
-        userId: user.id,
-      },
-    });
-
-    if (!bankAccount) {
-      return NextResponse.json(
-        { error: "Bank account not found" },
-        { status: 404 },
-      );
-    }
-
-    const apiKey = decrypt(user.encryptedApiKey);
-    const secretKey = decrypt(user.encryptedSecretKey);
-
-    // Create transaction record
-    const transaction = await db.transaction.create({
-      data: {
-        userId: user.id,
-        bankAccountId: bankAccount.id,
-        amount: amountNum,
-        type: "MANUAL",
-        status: "PENDING",
-      },
-    });
-
-    // Call IDRX redeem request API
-    const requestBody = {
-      bankCode: bankAccount.bankCode,
-      bankAccountNumber: bankAccount.bankAccountNumber,
-      amount: amount.toString(),
-    };
-
-    const headers = generateIdrxHeaders(apiKey, secretKey, requestBody);
-
-    const response = await fetch(
-      `${process.env.IDRX_BASE_URL}/api/transaction/redeem-request`,
-      {
-        method: "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "application/json",
+        { 
+          error: kycCheck.error || "KYC verification failed",
+          requiresKYC: true,
         },
-        body: JSON.stringify(requestBody),
-      },
+        { status: 403 }
+      );
+    }
+
+    // Submit redeem request using user's API keys
+    const response = await submitRedeemRequest(
+      kycCheck.user.apiKey!,
+      kycCheck.user.apiSecret!,
+      {
+        txHash,
+        networkChainId,
+        amountTransfer,
+        bankAccount,
+        bankCode,
+        bankName,
+        bankAccountName,
+        walletAddress,
+        notes,
+      }
     );
 
-    const data = await response.json();
-
-    if (response.ok) {
-      // Update transaction status
-      await db.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Redeem request error:", error);
+    
+    const err = error as any;
+    
+    // Handle specific error types
+    if (err.message?.includes('KYC') || err.message?.includes('not found')) {
+      return NextResponse.json(
+        { 
+          error: 'KYC verification required', 
+          code: 'KYC_REQUIRED',
+          details: 'Please complete KYC verification to make transfers'
         },
-      });
-
-      return NextResponse.json({
-        success: true,
-        transaction,
-        idrxResponse: data,
-      });
+        { status: 403 }
+      );
     }
-
-    // Update transaction as failed
-    await db.transaction.update({
-      where: { id: transaction.id },
-      data: { status: "FAILED" },
-    });
-
+    
+    if (err.response?.status === 401) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid API credentials', 
+          code: 'AUTH_FAILED',
+          details: 'Your IDRX API keys are invalid or expired'
+        },
+        { status: 401 }
+      );
+    }
+    
+    if (err.response?.status === 400) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid request', 
+          code: 'INVALID_REQUEST',
+          details: err.response?.data?.message || 'Invalid transfer parameters'
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (err.message?.includes('balance') || err.message?.includes('insufficient')) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient balance', 
+          code: 'INSUFFICIENT_BALANCE',
+          details: 'Not enough IDRX balance to complete this transfer'
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
-      {
-        error: "Redeem request failed",
-        details: data,
-        transaction,
+      { 
+        error: 'Transfer request failed', 
+        code: 'REQUEST_FAILED',
+        details: err.message || 'An unexpected error occurred'
       },
-      { status: response.status },
+      { status: 500 }
     );
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { parseQRIS, isQRISCode } from "../../../lib/qrisParser";
+import { requireKYC } from "../../../lib/kycVerification";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields: walletAddress, qrisCode" },
         { status: 400 }
+      );
+    }
+
+    // Check KYC status first
+    const kycCheck = await requireKYC(walletAddress);
+    if (!kycCheck.success) {
+      return NextResponse.json(
+        { 
+          error: kycCheck.error,
+          requiresKYC: true,
+        },
+        { status: 403 }
       );
     }
 
@@ -55,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Get user by wallet address
     const user = await prisma.user.findFirst({
-      where: { address: walletAddress },
+      where: { walletAddress: walletAddress.toLowerCase() },
     });
 
     if (!user) {

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Plus, QrCode, ChevronDown, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { Bell, QrCode, ChevronDown, ArrowUpRight, ArrowDownLeft, AlertCircle } from "lucide-react";
 import BottomNavbar from "./components/BottomNavbar";
 import Link from "next/link";
 import { useAuth } from "./context/AuthContext";
@@ -86,7 +86,7 @@ const categories = [
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, needsOnboarding } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   // Get user initials from fullName
@@ -198,17 +198,17 @@ export default function Home() {
             </h2>
             <p className="text-white/90 text-sm tracking-[-0.15px] mb-6">≈ Rp 1.500.000</p>
             
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Link 
-                href="/walletpage"
-                className="flex-1 h-[46px] bg-white/20 border border-white/30 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-colors"
+                href="/transfer"
+                className="h-[46px] bg-white/20 border border-white/30 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-colors"
               >
-                <Plus className="w-4 h-4 text-white" />
-                <span className="text-white text-sm tracking-[-0.15px]">Top Up</span>
+                <ArrowUpRight className="w-4 h-4 text-white" />
+                <span className="text-white text-sm tracking-[-0.15px]">Transfer</span>
               </Link>
               <Link 
                 href="/scan"
-                className="flex-1 h-[46px] bg-white rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-gray-50 transition-colors"
+                className="h-[46px] bg-white rounded-xl flex items-center justify-center gap-2 shadow-lg hover:bg-gray-50 transition-colors"
               >
                 <QrCode className="w-4 h-4 text-[#155dfc]" />
                 <span className="text-[#155dfc] text-sm tracking-[-0.15px]">Scan QR</span>
@@ -216,6 +216,33 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* KYC Warning Banner */}
+        {needsOnboarding && (
+          <div className="mx-6 mb-4">
+            <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-orange-900 font-semibold text-sm mb-1">
+                    Complete KYC to Start Transacting
+                  </h3>
+                  <p className="text-orange-800 text-xs mb-3">
+                    You need to verify your identity before you can scan QR codes and make payments.
+                  </p>
+                  <button
+                    onClick={() => router.push("/onboarding")}
+                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Complete KYC Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Month Selector */}
         <div className="mx-6 mb-4">
