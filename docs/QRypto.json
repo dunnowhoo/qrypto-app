@@ -1,0 +1,320 @@
+{
+  "info": {
+    "name": "QRypto",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/transaction/user-transaction-history",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "transaction",
+            "user-transaction-history"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Redeem Request",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "/api/transation/redeem-request",
+          "protocol": "",
+          "host": [],
+          "path": [
+            "api",
+            "transation",
+            "redeem-request"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "add bank",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "idrx-api-key",
+            "value": "{{idrx-api-key}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-sig",
+            "value": "{{current_sig}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-ts",
+            "value": "{{current_ts}}",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/add-bank-account",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "add-bank-account"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bankAccountNumber\": \"7297568196\",\n  \"bankCode\": \"451\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "const CryptoJS = require('crypto-js');",
+              "",
+              "const timestamp = Date.now().toString();",
+              "bru.setVar('current_ts', timestamp);",
+              "",
+              "const secret = bru.getEnvVar(\"idrx-secret-key\"); ",
+              "",
+              "const hash = CryptoJS.HmacSHA256(timestamp, secret);",
+              "const signature = CryptoJS.enc.Hex.stringify(hash);",
+              "",
+              "bru.setVar('current_sig', signature);",
+              "",
+              "console.log(\"Timestamp generated:\", timestamp);",
+              "console.log(\"Signature generated:\", signature);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete bank",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "idrx-api-key",
+            "value": "{{idrx-api-key}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-sig",
+            "value": "{{current_sig}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-ts",
+            "value": "{{current_ts}}",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/delete-bank-account/4238",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "delete-bank-account",
+            "4238"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "get bank accounts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "idrx-api-key",
+            "value": "{{idrx-api-key}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-sig",
+            "value": "{{current_sig}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "idrx-api-ts",
+            "value": "{{current_ts}}",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/get-bank-accounts",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "get-bank-accounts"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "KYC",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/onboarding",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "onboarding"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Members",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/members",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "members"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "accepted banks",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "{{baseUrl}}/api/transaction/method",
+          "protocol": "",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "transaction",
+            "method"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "idrx-api-key",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "current_sig",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "current_ts",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}

@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
 }
 
@@ -11,18 +8,38 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  address      String        @unique
-  fullName     String?
-  email        String?
-  phone        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
+  id               String        @id @default(uuid())
+  walletAddress    String        @unique
+  address          String?       @unique
+  fullName         String?
+  email            String?
+  phone            String?
+  kycStatus        KycStatus     @default(PENDING)
+  encryptedApiKey  String?
+  encryptedSecretKey String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  bankAccounts     BankAccount[]
+  transactions     Transaction[]
+}
+
+model BankAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  bankCode          String
+  bankAccountNumber String
+  createdAt         DateTime      @default(now())
+  
+  user              User          @relation(fields: [userId], references: [id])
+  transactions      Transaction[]
+  merchants         Merchant[]
 }
 
 // Transaction types
 enum TransactionType {
+  MANUAL
+  QRIS
   QRIS_PAYMENT  // User pays QRIS with crypto
   RECEIVE       // User receives crypto
   SEND          // User sends crypto
@@ -34,40 +51,44 @@ enum TransactionType {
 enum TransactionStatus {
   PENDING       // Created, awaiting crypto transfer
   PROCESSING    // Crypto received, processing fiat payment
-  SUCCESS       // Completed successfully
+  COMPLETED     // Completed successfully
+  SUCCESS       // Completed successfully (alias)
   FAILED        // Failed
   EXPIRED       // Payment timeout
   REFUNDED      // Refunded to user
 }
 
 model Transaction {
-  id             String            @id @default(cuid())
-  userId         String
-  user           User              @relation(fields: [userId], references: [id])
-  
-  type           TransactionType
-  status         TransactionStatus @default(PENDING)
+  id              String            @id @default(uuid())
+  userId          String
+  bankAccountId   String?
+  amount          Float
+  status          TransactionStatus @default(PENDING)
+  type            TransactionType
+  merchantId      String?
+  createdAt       DateTime          @default(now())
+  completedAt     DateTime?
   
   // Crypto side
-  cryptoAmount   Decimal           @db.Decimal(36, 18)
-  cryptoCurrency String            @default("IDRX") // IDRX, USDC, ETH
-  txHash         String?           // Blockchain transaction hash
-  fromAddress    String?           // Sender wallet address
-  toAddress      String?           // Receiver wallet address (QRypto treasury)
-  networkFee     Decimal?          @db.Decimal(36, 18)
+  cryptoAmount    Decimal?          @db.Decimal(36, 18)
+  cryptoCurrency  String?           @default("IDRX") // IDRX, USDC, ETH
+  txHash          String?           // Blockchain transaction hash
+  fromAddress     String?           // Sender wallet address
+  toAddress       String?           // Receiver wallet address (QRypto treasury)
+  networkFee      Decimal?          @db.Decimal(36, 18)
   
   // Fiat side (for QRIS payments)
-  fiatAmount     Decimal?          @db.Decimal(20, 2)
-  fiatCurrency   String?           @default("IDR")
+  fiatAmount      Decimal?          @db.Decimal(20, 2)
+  fiatCurrency    String?           @default("IDR")
   
   // QRIS specific
-  qrisPayment    QrisPayment?
+  qrisPayment     QrisPayment?
   
   // Metadata
-  description    String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  completedAt    DateTime?
+  description     String?
+  
+  user            User              @relation(fields: [userId], references: [id])
+  bankAccount     BankAccount?      @relation(fields: [bankAccountId], references: [id])
   
   @@index([userId])
   @@index([status])
@@ -109,25 +130,35 @@ model TreasuryWallet {
   createdAt DateTime @default(now())
 }
 
-// Merchant Mapping for QRIS -> Bank Account (Demo/Hackathon Strategy)
-// Maps NMID or merchant name to actual bank account for Xendit disbursement
-model MerchantMap {
-  id            String   @id @default(cuid())
+model Merchant {
+  id              String      @id @default(uuid())
+  merchantId      String      @unique
+  name            String
+  bankAccountId   String
+  defaultAmount   Float
   
   // QRIS Identification (at least one required)
-  nmid          String?  @unique  // National Merchant ID from QRIS (e.g., "ID1026471004881")
-  merchantName  String?           // Fallback: match by name (e.g., "JejaKriya")
+  nmid            String?     @unique  // National Merchant ID from QRIS
+  merchantName    String?              // Fallback: match by name
   
   // Bank Account for Xendit Disbursement
-  bankCode      String            // Xendit bank code: "BCA", "MANDIRI", "BNI", "BRI", etc.
-  accountNumber String            // Bank account number
-  accountName   String            // Account holder name (for verification)
+  bankCode        String?              // Xendit bank code: "BCA", "MANDIRI", etc.
+  accountNumber   String?              // Bank account number
+  accountName     String?              // Account holder name
   
   // Metadata
-  isActive      Boolean  @default(true)
-  description   String?           // Notes about this merchant
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isActive        Boolean     @default(true)
+  description     String?              // Notes about this merchant
+  updatedAt       DateTime    @updatedAt
+  
+  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id])
   
   @@index([merchantName])
 }
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+

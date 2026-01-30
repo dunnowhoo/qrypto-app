@@ -1,11 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BottomNavbar from "../components/BottomNavbar";
 
 // Transaction types
 type TransactionStatus = "Success" | "Pending" | "Failed";
-type TransactionCategory = "Food" | "Shopping" | "Transport" | "Grocery" | "Cafe" | "Tech" | "Order";
+type TransactionCategory =
+  | "Food"
+  | "Shopping"
+  | "Transport"
+  | "Grocery"
+  | "Cafe"
+  | "Tech"
+  | "Order";
 
 interface Transaction {
   id: string;
@@ -25,159 +32,191 @@ interface Transaction {
   block: string;
 }
 
-// Sample transaction data
-const transactions: Transaction[] = [
-  {
-    id: "1",
-    txId: "TX-12345678",
-    name: "Sate Khas Senayan",
-    date: "29 Dec 2025",
-    time: "14:30",
-    amount: "-Rp 55.000",
-    status: "Success",
-    category: "Food",
-    icon: "🍴",
-    iconBg: "#FEF3C7",
-    iconColor: "#D97706",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0015 MATIC",
-    block: "#52847391",
-  },
-  {
-    id: "2",
-    txId: "TX-12345677",
-    name: "Kopi Kenangan",
-    date: "28 Dec 2025",
-    time: "09:15",
-    amount: "-Rp 35.000",
-    status: "Success",
-    category: "Cafe",
-    icon: "☕",
-    iconBg: "#FEF3C7",
-    iconColor: "#D97706",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0012 MATIC",
-    block: "#52847390",
-  },
-  {
-    id: "3",
-    txId: "TX-12345676",
-    name: "Indomaret Sudirman",
-    date: "27 Dec 2025",
-    time: "18:45",
-    amount: "-Rp 125.000",
-    status: "Success",
-    category: "Grocery",
-    icon: "🛒",
-    iconBg: "#DBEAFE",
-    iconColor: "#2563EB",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0018 MATIC",
-    block: "#52847389",
-  },
-  {
-    id: "4",
-    txId: "TX-12345675",
-    name: "Grab Transport",
-    date: "26 Dec 2025",
-    time: "16:20",
-    amount: "-Rp 45.000",
-    status: "Success",
-    category: "Transport",
-    icon: "🚗",
-    iconBg: "#D1FAE5",
-    iconColor: "#059669",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0010 MATIC",
-    block: "#52847388",
-  },
-  {
-    id: "5",
-    txId: "TX-12345674",
-    name: "Shopee",
-    date: "25 Dec 2025",
-    time: "12:00",
-    amount: "-Rp 250.000",
-    status: "Pending",
-    category: "Shopping",
-    icon: "🛍️",
-    iconBg: "#FEE2E2",
-    iconColor: "#DC2626",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0025 MATIC",
-    block: "#52847387",
-  },
-  {
-    id: "6",
-    txId: "TX-12345673",
-    name: "Tokopedia",
-    date: "24 Dec 2025",
-    time: "10:30",
-    amount: "-Rp 180.000",
-    status: "Success",
-    category: "Tech",
-    icon: "💻",
-    iconBg: "#E0E7FF",
-    iconColor: "#4F46E5",
-    paymentMethod: "USDC",
-    network: "Polygon",
-    gasFee: "0.0020 MATIC",
-    block: "#52847386",
-  },
-  {
-    id: "7",
-    txId: "TX-12345672",
-    name: "GoFood Order",
-    date: "23 Dec 2025",
-    time: "19:45",
-    amount: "-Rp 78.000",
-    status: "Success",
-    category: "Order",
-    icon: "📦",
-    iconBg: "#FCE7F3",
-    iconColor: "#DB2777",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0014 MATIC",
-    block: "#52847385",
-  },
-  {
-    id: "8",
-    txId: "TX-12345671",
-    name: "Starbucks",
-    date: "22 Dec 2025",
-    time: "08:00",
-    amount: "-Rp 70.000",
-    status: "Failed",
-    category: "Cafe",
-    icon: "☕",
-    iconBg: "#FEF3C7",
-    iconColor: "#D97706",
-    paymentMethod: "IDRX",
-    network: "Polygon",
-    gasFee: "0.0015 MATIC",
-    block: "#52847384",
-  },
-];
+interface IdrxTransaction {
+  id: string;
+  transactionId: string;
+  merchantName: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  paymentMethod: string;
+  // Add other fields as needed from Idrx API response
+}
 
-const categories = ["All", "Food", "Shopping", "Transport", "Grocery", "Cafe", "Tech", "Order"];
+const baseUrl =
+  process.env.NEXT_PUBLIC_IDRX_BASE_URL || "https://api.idrx.example.com";
+
+const categories = [
+  "All",
+  "Food",
+  "Shopping",
+  "Transport",
+  "Grocery",
+  "Cafe",
+  "Tech",
+  "Order",
+];
 
 export default function HistoryPage() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedMonth, _setSelectedMonth] = useState("December 2025");
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState("December 2025");
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch transactions from Idrx API
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `${baseUrl}/api/transaction/user-transaction-history`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch transactions: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const idrxTransactions: IdrxTransaction[] = data.transactions || [];
+
+        // Transform Idrx transactions to match our interface
+        const transformedTransactions: Transaction[] = idrxTransactions.map(
+          (tx, index) => {
+            const date = new Date(tx.createdAt);
+            const formattedDate = date.toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            });
+            const formattedTime = date.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            // Determine category based on merchant name (simplified logic)
+            const merchantName = tx.merchantName.toLowerCase();
+            let category: TransactionCategory = "Order";
+
+            if (
+              merchantName.includes("food") ||
+              merchantName.includes("restaurant") ||
+              merchantName.includes("sate")
+            ) {
+              category = "Food";
+            } else if (
+              merchantName.includes("cafe") ||
+              merchantName.includes("coffee") ||
+              merchantName.includes("starbucks")
+            ) {
+              category = "Cafe";
+            } else if (
+              merchantName.includes("transport") ||
+              merchantName.includes("grab") ||
+              merchantName.includes("go")
+            ) {
+              category = "Transport";
+            } else if (
+              merchantName.includes("grocery") ||
+              merchantName.includes("indomaret")
+            ) {
+              category = "Grocery";
+            } else if (
+              merchantName.includes("shop") ||
+              merchantName.includes("shopee") ||
+              merchantName.includes("tokopedia")
+            ) {
+              category = "Shopping";
+            } else if (
+              merchantName.includes("tech") ||
+              merchantName.includes("computer")
+            ) {
+              category = "Tech";
+            }
+
+            // Determine icon based on category
+            const iconMap: Record<TransactionCategory, string> = {
+              Food: "🍴",
+              Shopping: "🛍️",
+              Transport: "🚗",
+              Grocery: "🛒",
+              Cafe: "☕",
+              Tech: "💻",
+              Order: "📦",
+            };
+
+            const iconBgMap: Record<TransactionCategory, string> = {
+              Food: "#FEF3C7",
+              Shopping: "#FEE2E2",
+              Transport: "#D1FAE5",
+              Grocery: "#DBEAFE",
+              Cafe: "#FEF3C7",
+              Tech: "#E0E7FF",
+              Order: "#FCE7F3",
+            };
+
+            const iconColorMap: Record<TransactionCategory, string> = {
+              Food: "#D97706",
+              Shopping: "#DC2626",
+              Transport: "#059669",
+              Grocery: "#2563EB",
+              Cafe: "#D97706",
+              Tech: "#4F46E5",
+              Order: "#DB2777",
+            };
+
+            return {
+              id: tx.id,
+              txId: tx.transactionId,
+              name: tx.merchantName,
+              date: formattedDate,
+              time: formattedTime,
+              amount:
+                tx.amount > 0
+                  ? `+Rp ${tx.amount.toLocaleString("id-ID")}`
+                  : `-Rp ${Math.abs(tx.amount).toLocaleString("id-ID")}`,
+              status: tx.status as TransactionStatus,
+              category,
+              icon: iconMap[category],
+              iconBg: iconBgMap[category],
+              iconColor: iconColorMap[category],
+              paymentMethod: tx.paymentMethod || "IDRX",
+              network: "Polygon",
+              gasFee: "0.0015 MATIC",
+              block: `#${Math.floor(Math.random() * 900000) + 100000}`,
+            };
+          },
+        );
+
+        setTransactions(transformedTransactions);
+      } catch (err) {
+        console.error("Error fetching transactions:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch transactions",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   // Filter transactions
-  const filteredTransactions = selectedCategory === "All"
-    ? transactions
-    : transactions.filter((t) => t.category === selectedCategory);
+  const filteredTransactions =
+    selectedCategory === "All"
+      ? transactions
+      : transactions.filter((t) => t.category === selectedCategory);
 
   // Calculate stats
   const totalSpent = filteredTransactions.reduce((sum, t) => {
@@ -185,10 +224,13 @@ export default function HistoryPage() {
     return sum + amount;
   }, 0);
 
-  const successCount = filteredTransactions.filter((t) => t.status === "Success").length;
-  const successRate = filteredTransactions.length > 0
-    ? ((successCount / filteredTransactions.length) * 100).toFixed(1)
-    : "0.0";
+  const successCount = filteredTransactions.filter(
+    (t) => t.status === "Success",
+  ).length;
+  const successRate =
+    filteredTransactions.length > 0
+      ? ((successCount / filteredTransactions.length) * 100).toFixed(1)
+      : "0.0";
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -224,12 +266,33 @@ export default function HistoryPage() {
       </div>
 
       {/* Month Selector */}
-      <div className="month-selector" onClick={() => setShowMonthPicker(!showMonthPicker)}>
+      <div
+        className="month-selector"
+        onClick={() => setShowMonthPicker(!showMonthPicker)}
+      >
         <div className="month-content">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="18" rx="2" stroke="#6B7280" strokeWidth="2" />
-            <path d="M16 2V6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" />
-            <path d="M8 2V6" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" />
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="18"
+              rx="2"
+              stroke="#6B7280"
+              strokeWidth="2"
+            />
+            <path
+              d="M16 2V6"
+              stroke="#6B7280"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M8 2V6"
+              stroke="#6B7280"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
             <path d="M3 10H21" stroke="#6B7280" strokeWidth="2" />
           </svg>
           <span>{selectedMonth}</span>
@@ -274,50 +337,86 @@ export default function HistoryPage() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading transactions...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <p className="error-message">Failed to load transactions</p>
+          <button
+            className="retry-btn"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Transaction List */}
-      <div className="transaction-list">
-        {filteredTransactions.map((transaction) => (
-          <div key={transaction.id} className="transaction-item">
-            <div
-              className="transaction-icon"
-              style={{ backgroundColor: transaction.iconBg }}
-            >
-              <span style={{ color: transaction.iconColor }}>{transaction.icon}</span>
+      {!loading && !error && (
+        <div className="transaction-list">
+          {filteredTransactions.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <p>No transactions found</p>
             </div>
-            <div className="transaction-info">
-              <p className="transaction-name">{transaction.name}</p>
-              <p className="transaction-date">
-                {transaction.date} • {transaction.time}
-              </p>
-              <p className="transaction-txid">{transaction.txId}</p>
-            </div>
-            <div className="transaction-right">
-              <p className="transaction-amount">{transaction.amount}</p>
-              <span
-                className={`transaction-status ${
-                  transaction.status === "Success"
-                    ? "status-success"
-                    : transaction.status === "Pending"
-                    ? "status-pending"
-                    : "status-failed"
-                }`}
-              >
-                {transaction.status}
-              </span>
-              <button
-                className="view-details-btn"
-                onClick={() => setSelectedTransaction(transaction)}
-              >
-                View Details
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ) : (
+            filteredTransactions.map((transaction) => (
+              <div key={transaction.id} className="transaction-item">
+                <div
+                  className="transaction-icon"
+                  style={{ backgroundColor: transaction.iconBg }}
+                >
+                  <span style={{ color: transaction.iconColor }}>
+                    {transaction.icon}
+                  </span>
+                </div>
+                <div className="transaction-info">
+                  <p className="transaction-name">{transaction.name}</p>
+                  <p className="transaction-date">
+                    {transaction.date} • {transaction.time}
+                  </p>
+                  <p className="transaction-txid">{transaction.txId}</p>
+                </div>
+                <div className="transaction-right">
+                  <p className="transaction-amount">{transaction.amount}</p>
+                  <span
+                    className={`transaction-status ${
+                      transaction.status === "Success"
+                        ? "status-success"
+                        : transaction.status === "Pending"
+                          ? "status-pending"
+                          : "status-failed"
+                    }`}
+                  >
+                    {transaction.status}
+                  </span>
+                  <button
+                    className="view-details-btn"
+                    onClick={() => setSelectedTransaction(transaction)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Transaction Detail Modal */}
       {selectedTransaction && (
-        <div className="modal-overlay" onClick={() => setSelectedTransaction(null)}>
+        <div
+          className="modal-overlay"
+          onClick={() => setSelectedTransaction(null)}
+        >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="modal-header">
@@ -347,7 +446,9 @@ export default function HistoryPage() {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span className="modal-status">{selectedTransaction.status}</span>
+                    <span className="modal-status">
+                      {selectedTransaction.status}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -417,11 +518,15 @@ export default function HistoryPage() {
               </div>
               <div className="modal-detail-item">
                 <p className="modal-detail-label">Category</p>
-                <p className="modal-detail-value">{selectedTransaction.category}</p>
+                <p className="modal-detail-value">
+                  {selectedTransaction.category}
+                </p>
               </div>
               <div className="modal-detail-item">
                 <p className="modal-detail-label">Payment Method</p>
-                <p className="modal-detail-value">{selectedTransaction.paymentMethod}</p>
+                <p className="modal-detail-value">
+                  {selectedTransaction.paymentMethod}
+                </p>
               </div>
             </div>
 
@@ -430,15 +535,21 @@ export default function HistoryPage() {
               <p className="blockchain-title">Blockchain Details</p>
               <div className="blockchain-row">
                 <span className="blockchain-label">Network</span>
-                <span className="blockchain-value">{selectedTransaction.network}</span>
+                <span className="blockchain-value">
+                  {selectedTransaction.network}
+                </span>
               </div>
               <div className="blockchain-row">
                 <span className="blockchain-label">Gas Fee</span>
-                <span className="blockchain-value">{selectedTransaction.gasFee}</span>
+                <span className="blockchain-value">
+                  {selectedTransaction.gasFee}
+                </span>
               </div>
               <div className="blockchain-row">
                 <span className="blockchain-label">Block</span>
-                <span className="blockchain-value">{selectedTransaction.block}</span>
+                <span className="blockchain-value">
+                  {selectedTransaction.block}
+                </span>
               </div>
             </div>
 
@@ -474,7 +585,13 @@ export default function HistoryPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <circle cx="18" cy="5" r="3" stroke="white" strokeWidth="2" />
                   <circle cx="6" cy="12" r="3" stroke="white" strokeWidth="2" />
-                  <circle cx="18" cy="19" r="3" stroke="white" strokeWidth="2" />
+                  <circle
+                    cx="18"
+                    cy="19"
+                    r="3"
+                    stroke="white"
+                    strokeWidth="2"
+                  />
                   <path
                     d="M8.59 13.51L15.42 17.49"
                     stroke="white"
