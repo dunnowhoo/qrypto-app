@@ -7,7 +7,7 @@ import { Avatar, Name, Identity, Address } from "@coinbase/onchainkit/identity";
 import { useAccount } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 
-const logoIcon = "https://www.figma.com/api/mcp/asset/ec8fba16-0d72-4a16-a0b2-a3eca811dc2c";
+const logoIcon = "/logo.svg";
 
 export default function LoginPage() {
   const router = useRouter();

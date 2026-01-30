@@ -7,8 +7,8 @@ import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 import { useAccount, useSignMessage } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 
-const logoIcon = "https://www.figma.com/api/mcp/asset/8b4e284d-3ad6-4335-b712-0b23beb773e2";
-const googleIcon = "https://www.figma.com/api/mcp/asset/72b0e585-f195-467f-a9cb-9ba4ad7f87b1";
+const logoIcon = "/logo.svg";
+const googleIcon = "/Icon.svg";
 
 export default function RegisterPage() {
   const router = useRouter();

@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useAccount, usePublicClient } from "wagmi";
+import { getIDRXBalance } from "./lib/burnIDRX";
 import { useRouter } from "next/navigation";
 import { Bell, QrCode, ChevronDown, ArrowUpRight, ArrowDownLeft, AlertCircle } from "lucide-react";
 import BottomNavbar from "./components/BottomNavbar";
@@ -85,9 +87,32 @@ const categories = [
 ];
 
 export default function Home() {
+  const { address } = useAccount();
+  const publicClient = usePublicClient();
   const router = useRouter();
   const { isAuthenticated, user, needsOnboarding } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [idrxBalance, setIdrxBalance] = useState<string>("0");
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  // Fetch live IDRX balance for connected wallet
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!address || !publicClient) {
+        setIdrxBalance("0");
+        return;
+      }
+      setIsBalanceLoading(true);
+      try {
+        const balance = await getIDRXBalance(address, publicClient as any);
+        setIdrxBalance(balance);
+      } catch (err) {
+        setIdrxBalance("0");
+      } finally {
+        setIsBalanceLoading(false);
+      }
+    };
+    fetchBalance();
+  }, [address, publicClient]);
 
   // Get user initials from fullName
   const getInitials = (name: string | null | undefined) => {
@@ -201,9 +226,15 @@ export default function Home() {
           >
             <p className="text-white/80 text-sm tracking-[-0.15px] mb-2">Total Balance</p>
             <h2 className="text-white text-4xl font-normal tracking-wide mb-2">
-              1.500.000 IDRX
+              {isBalanceLoading ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                `${parseFloat(idrxBalance).toLocaleString("id-ID")} IDRX`
+              )}
             </h2>
-            <p className="text-white/90 text-sm tracking-[-0.15px] mb-6">≈ Rp 1.500.000</p>
+            <p className="text-white/90 text-sm tracking-[-0.15px] mb-6">
+              ≈ Rp {isBalanceLoading ? "-" : parseFloat(idrxBalance).toLocaleString("id-ID")}
+            </p>
             
             <div className="grid grid-cols-2 gap-3">
               <Link 
