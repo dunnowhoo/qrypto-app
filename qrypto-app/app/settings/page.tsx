@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import {
   ShieldCheck,
   Smartphone,
@@ -28,14 +29,16 @@ const SettingItem = ({
   type = "link",
   value,
   href,
+  onClick,
 }: {
-  icon: any;
+  icon: React.ElementType;
   iconBg: string;
   title: string;
   subtitle: string;
   type?: "link" | "toggle";
   value?: string;
   href?: string;
+  onClick?: () => void;
 }) => {
   const content = (
     <div className="flex items-center justify-between w-full">
@@ -82,7 +85,10 @@ const SettingItem = ({
   }
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white active:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0">
+    <div 
+      onClick={onClick}
+      className="flex items-center justify-between p-4 bg-white active:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100 last:border-b-0"
+    >
       {content}
     </div>
   );
@@ -90,9 +96,22 @@ const SettingItem = ({
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleResetOnboarding = () => {
+    localStorage.removeItem("hasSeenOnboarding");
+    router.push("/");
+  };
+
+  const handleLogout = async () => {
+    logout();
+    // Small delay to ensure state is cleared
+    await new Promise(resolve => setTimeout(resolve, 100));
+    router.push("/login");
+  };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] pb-24 max-w-md mx-auto">
+    <div className="min-h-screen bg-[#F8F9FB] pb-24 max-w-[480px] mx-auto">
       {/* Header */}
       <div className="sticky top-0 bg-white px-4 py-4 flex items-center gap-4 border-b border-gray-100 z-10">
         <button
@@ -194,6 +213,7 @@ export default function SettingsPage() {
               iconBg="bg-purple-50"
               title="Reset Onboarding"
               subtitle="View intro screens again"
+              onClick={handleResetOnboarding}
             />
             <SettingItem
               icon={Palette}
@@ -217,7 +237,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Logout Button */}
-          <button className="w-full bg-white border border-red-100 py-4 rounded-3xl flex items-center justify-center gap-3 text-red-500 font-semibold active:scale-[0.98] transition-transform shadow-sm">
+          <button 
+            onClick={handleLogout}
+            className="w-full bg-white border border-red-100 py-4 rounded-3xl flex items-center justify-center gap-3 text-red-500 font-semibold active:scale-[0.98] transition-transform shadow-sm"
+          >
             <LogOut size={20} />
             <span>Log Out</span>
           </button>

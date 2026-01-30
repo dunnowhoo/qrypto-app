@@ -170,7 +170,7 @@ const categories = ["All", "Food", "Shopping", "Transport", "Grocery", "Cafe", "
 export default function HistoryPage() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedMonth, setSelectedMonth] = useState("December 2025");
+  const [selectedMonth, _setSelectedMonth] = useState("December 2025");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 

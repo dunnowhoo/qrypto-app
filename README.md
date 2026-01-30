@@ -34,7 +34,8 @@ This repository is organized as a monorepo containing both the blockchain logic 
 ├── qrypto-app/         # 💻 Fullstack App (Next.js + OnchainKit)
 │   ├── app/            # App Router & API Routes (Backend)
 │   ├── components/     # UI Components
-│   ├── prisma/         # Database Schema (SQLite/Postgres)
+│   ├── prisma/         # Database Schema (Prisma Postgres)
+│   ├── context/        # Auth Context & State Management
 │   └── public/         # Static Assets
 │
 └── README.md           # This guide
@@ -132,28 +133,35 @@ npm install
 
 
 3. **Setup Environment:**
-Create a `.env.local` file in the `qrypto-app/` directory:
+Create a `.env` file in the `qrypto-app/` directory:
 ```env
-# --- OnchainKit & CDP ---
-NEXT_PUBLIC_CDP_API_KEY=your_public_api_key_from_cdp
-NEXT_PUBLIC_PROJECT_ID=your_cdp_project_id
+# --- Project Info ---
+NEXT_PUBLIC_PROJECT_NAME="qrypto-app"
 
-# --- Smart Contract (From Phase 1) ---
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x_your_deployed_contract_address_here
-NEXT_PUBLIC_CHAIN_ID=84532 # Base Sepolia
+# --- OnchainKit ---
+NEXT_PUBLIC_ONCHAINKIT_API_KEY="1e6373b6-2b48-4e48-bc3a-45e82c851e56"
 
-# --- Database ---
-DATABASE_URL="file:./dev.db"
+# --- Database (Prisma Postgres) ---
+DATABASE_URL="postgres://8b9c3ca92d9efd60fe9e6e153e3881ffa2d0c390a9feb49a2d2bdbc7d1a5e146:sk_sVxJy7xuswDGqSRv4EUY9@db.prisma.io:5432/postgres?sslmode=require"
 
 ```
 
 
-4. **Initialize Database (Prisma):**
-This creates the local SQLite database file.
+4. **Initialize Database (Prisma Postgres):**
+Set up your Prisma Postgres database:
 ```bash
+# Initialize Prisma with Prisma Postgres (cloud-hosted PostgreSQL)
+npx prisma init --db --output ../app/generated/prisma
+
+# Generate Prisma Client
+npx prisma generate
+
+# Run migrations
 npx prisma migrate dev --name init
 
 ```
+
+> **Note:** You'll be prompted to authenticate and select a region during `prisma init --db`. Choose the region closest to your location.
 
 
 5. **Run Development Server:**
@@ -172,24 +180,35 @@ Visit [http://localhost:3000](https://www.google.com/search?q=http://localhost:3
 
 ### How to Simulate a Payment
 
-1. **Login:** Connect using "Smart Wallet" (Create a passkey/Google account).
-2. **Faucet:** Make sure your wallet has some **Base Sepolia ETH** (or IDRX if you deployed a mock token).
-* *Get Testnet ETH:* [coinbase.com/faucets](https://www.google.com/search?q=https://coinbase.com/faucets)
+1. **Onboarding:** First-time users will see onboarding carousel. Complete it to proceed.
+2. **Login:** Connect using Coinbase Smart Wallet (Passkey/Biometric).
+   - Click "Sign In with Wallet"
+   - Sign the authentication message
+   - Your account is created and saved to database
+3. **Faucet:** Make sure your wallet has some **Base Sepolia ETH** (or IDRX if you deployed a mock token).
+   - *Get Testnet ETH:* [coinbase.com/faucets](https://coinbase.com/faucets)
 
 
 3. **Scan:** Click the Scan button (on emulator, use the "Upload QR" feature if camera is unavailable).
 4. **Confirm:** Review the quote and click "Pay".
 5. **Verify:** Check the console logs or database (`npx prisma studio`) to see the transaction status update.
 
-### Database GUI
+### Database Management
 
-To view registered orders and transaction history:
+**Prisma Studio (Local):**
+To view users, orders, and transaction history:
 
 ```bash
 # Inside qrypto-app folder
 npx prisma studio
 
 ```
+
+**Prisma Console (Cloud):**
+Access your Prisma Postgres database online:
+- Visit [console.prisma.io](https://console.prisma.io)
+- Navigate to your project
+- Use the built-in Studio for visual data management
 
 ---
 
