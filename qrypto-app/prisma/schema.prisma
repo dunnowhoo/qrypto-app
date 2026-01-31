@@ -8,7 +8,7 @@ datasource db {
 }
 
 model BankAccount {
-  id                String        @id
+  id                String        @id @default(uuid())
   userId            String
   bankCode          String
   bankAccountNumber String
@@ -19,7 +19,7 @@ model BankAccount {
 }
 
 model Merchant {
-  id            String      @id
+  id            String      @id @default(uuid())
   merchantId    String      @unique
   name          String
   bankAccountId String
@@ -31,14 +31,14 @@ model Merchant {
   accountName   String?
   isActive      Boolean     @default(true)
   description   String?
-  updatedAt     DateTime
+  updatedAt     DateTime    @updatedAt
   BankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
 
   @@index([merchantName])
 }
 
 model MerchantMap {
-  id            String   @id
+  id            String   @id @default(uuid())
   nmid          String?  @unique
   merchantName  String?
   bankCode      String
@@ -47,13 +47,13 @@ model MerchantMap {
   isActive      Boolean  @default(true)
   description   String?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 
   @@index([merchantName])
 }
 
 model QrisPayment {
-  id              String      @id
+  id              String      @id @default(cuid())
   transactionId   String      @unique
   qrisRaw         String
   merchantName    String
@@ -73,7 +73,7 @@ model QrisPayment {
 }
 
 model Transaction {
-  id             String            @id
+  id             String            @id @default(uuid())
   userId         String
   bankAccountId  String?
   amount         Float
@@ -91,7 +91,7 @@ model Transaction {
   fiatAmount     Decimal?          @db.Decimal(20, 2)
   fiatCurrency   String?           @default("IDR")
   description    String?
-  updatedAt      DateTime
+  updatedAt      DateTime          @updatedAt
   QrisPayment    QrisPayment?
   BankAccount    BankAccount?      @relation(fields: [bankAccountId], references: [id])
   User           User              @relation(fields: [userId], references: [id])
@@ -102,7 +102,7 @@ model Transaction {
 }
 
 model TreasuryWallet {
-  id        String   @id
+  id        String   @id @default(cuid())
   address   String   @unique
   network   String
   isActive  Boolean  @default(true)
