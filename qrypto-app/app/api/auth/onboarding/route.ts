@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { onboardUser } from "@/lib/idrx";
 import { prisma } from "@/app/lib/prisma";
-import { encryptData } from "@/lib/encryption";
+import { encryptData, decryptData } from "@/lib/encryption";
 
 export async function POST(request: NextRequest) {
   try {
@@ -126,12 +126,11 @@ export async function POST(request: NextRequest) {
     if (currentUser && currentUser.email === email && currentUser.kycStatus === 'PENDING') {
       if (currentUser.encryptedApiKey && currentUser.encryptedSecretKey) {
         console.log("User already has API keys in database. Using existing keys to complete KYC.");
-        
+
         // Decrypt existing API keys from database
-        const { decryptData } = await import("@/lib/encryption");
         apiKey = decryptData(currentUser.encryptedApiKey);
         apiSecret = decryptData(currentUser.encryptedSecretKey);
-        
+
         // Update user with APPROVED status
         const user = await prisma.user.update({
           where: { walletAddress: walletAddress.toLowerCase() },
@@ -158,7 +157,7 @@ export async function POST(request: NextRequest) {
       } else {
         // User has PENDING status but no API keys - show error
         return NextResponse.json(
-          { 
+          {
             error: "You have already submitted KYC with this email. Please use your IDRX API keys instead.",
             code: "EMAIL_ALREADY_EXISTS",
             details: "This email was registered with IDRX in a previous attempt. Please check the 'I already have an IDRX account' option and enter your API credentials, or contact support to retrieve them."
