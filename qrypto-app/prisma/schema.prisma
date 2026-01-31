@@ -1,133 +1,153 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String        @id @default(cuid())
-  address      String        @unique
-  fullName     String?
-  email        String?
-  phone        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
+model BankAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  bankCode          String
+  bankAccountNumber String
+  createdAt         DateTime      @default(now())
+  User              User          @relation(fields: [userId], references: [id])
+  Merchant          Merchant[]
+  Transaction       Transaction[]
 }
 
-// Transaction types
-enum TransactionType {
-  QRIS_PAYMENT  // User pays QRIS with crypto
-  RECEIVE       // User receives crypto
-  SEND          // User sends crypto
-  SWAP          // Token swap
-  TOP_UP        // Fiat to crypto
+model Merchant {
+  id            String      @id @default(uuid())
+  merchantId    String      @unique
+  name          String
+  bankAccountId String
+  defaultAmount Float
+  nmid          String?     @unique
+  merchantName  String?
+  bankCode      String?
+  accountNumber String?
+  accountName   String?
+  isActive      Boolean     @default(true)
+  description   String?
+  updatedAt     DateTime    @updatedAt
+  BankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@index([merchantName])
 }
 
-// Transaction status
-enum TransactionStatus {
-  PENDING       // Created, awaiting crypto transfer
-  PROCESSING    // Crypto received, processing fiat payment
-  SUCCESS       // Completed successfully
-  FAILED        // Failed
-  EXPIRED       // Payment timeout
-  REFUNDED      // Refunded to user
-}
+model MerchantMap {
+  id            String   @id @default(uuid())
+  nmid          String?  @unique
+  merchantName  String?
+  bankCode      String
+  accountNumber String
+  accountName   String
+  isActive      Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-model Transaction {
-  id             String            @id @default(cuid())
-  userId         String
-  user           User              @relation(fields: [userId], references: [id])
-  
-  type           TransactionType
-  status         TransactionStatus @default(PENDING)
-  
-  // Crypto side
-  cryptoAmount   Decimal           @db.Decimal(36, 18)
-  cryptoCurrency String            @default("IDRX") // IDRX, USDC, ETH
-  txHash         String?           // Blockchain transaction hash
-  fromAddress    String?           // Sender wallet address
-  toAddress      String?           // Receiver wallet address (QRypto treasury)
-  networkFee     Decimal?          @db.Decimal(36, 18)
-  
-  // Fiat side (for QRIS payments)
-  fiatAmount     Decimal?          @db.Decimal(20, 2)
-  fiatCurrency   String?           @default("IDR")
-  
-  // QRIS specific
-  qrisPayment    QrisPayment?
-  
-  // Metadata
-  description    String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  completedAt    DateTime?
-  
-  @@index([userId])
-  @@index([status])
-  @@index([txHash])
+  @@index([merchantName])
 }
 
 model QrisPayment {
   id              String      @id @default(cuid())
   transactionId   String      @unique
-  transaction     Transaction @relation(fields: [transactionId], references: [id])
-  
-  // QRIS Data
-  qrisRaw         String      // Original QRIS string
+  qrisRaw         String
   merchantName    String
   merchantCity    String?
   merchantId      String?
   terminalId      String?
-  
-  // Payment Gateway
-  paymentGateway  String?     // "xendit", "oy", "durianpay"
-  gatewayRefId    String?     // Reference ID from payment gateway
-  gatewayStatus   String?     // Status from payment gateway
-  gatewayResponse Json?       // Full response from gateway
-  
-  // Timestamps
+  paymentGateway  String?
+  gatewayRefId    String?
+  gatewayStatus   String?
+  gatewayResponse Json?
   createdAt       DateTime    @default(now())
-  paidAt          DateTime?   // When fiat payment was made to merchant
-  
-  @@index([merchantId])
+  paidAt          DateTime?
+  Transaction     Transaction @relation(fields: [transactionId], references: [id])
+
   @@index([gatewayRefId])
+  @@index([merchantId])
 }
 
-// QRypto Treasury Wallet for receiving crypto payments
+model Transaction {
+  id             String            @id @default(uuid())
+  userId         String
+  bankAccountId  String?
+  amount         Float
+  status         TransactionStatus @default(PENDING)
+  type           TransactionType
+  merchantId     String?
+  createdAt      DateTime          @default(now())
+  completedAt    DateTime?
+  cryptoAmount   Decimal?          @db.Decimal(36, 18)
+  cryptoCurrency String?           @default("IDRX")
+  txHash         String?
+  fromAddress    String?
+  toAddress      String?
+  networkFee     Decimal?          @db.Decimal(36, 18)
+  fiatAmount     Decimal?          @db.Decimal(20, 2)
+  fiatCurrency   String?           @default("IDR")
+  description    String?
+  updatedAt      DateTime          @updatedAt
+  QrisPayment    QrisPayment?
+  BankAccount    BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  User           User              @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([txHash])
+  @@index([userId])
+}
+
 model TreasuryWallet {
   id        String   @id @default(cuid())
   address   String   @unique
-  network   String   // "base", "ethereum", "polygon"
+  network   String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 }
 
-// Merchant Mapping for QRIS -> Bank Account (Demo/Hackathon Strategy)
-// Maps NMID or merchant name to actual bank account for Xendit disbursement
-model MerchantMap {
-  id            String   @id @default(cuid())
-  
-  // QRIS Identification (at least one required)
-  nmid          String?  @unique  // National Merchant ID from QRIS (e.g., "ID1026471004881")
-  merchantName  String?           // Fallback: match by name (e.g., "JejaKriya")
-  
-  // Bank Account for Xendit Disbursement
-  bankCode      String            // Xendit bank code: "BCA", "MANDIRI", "BNI", "BRI", etc.
-  accountNumber String            // Bank account number
-  accountName   String            // Account holder name (for verification)
-  
-  // Metadata
-  isActive      Boolean  @default(true)
-  description   String?           // Notes about this merchant
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  @@index([merchantName])
+model User {
+  id                 String        @id @default(uuid())
+  walletAddress      String        @unique
+  address            String?
+  fullName           String?
+  email              String?
+  phone              String?
+  idNumber           String?       @unique
+  kycStatus          KycStatus     @default(PENDING)
+  encryptedApiKey    String?
+  encryptedSecretKey String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  BankAccount        BankAccount[]
+  Transaction        Transaction[]
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum TransactionType {
+  MANUAL
+  QRIS
+  QRIS_PAYMENT
+  RECEIVE
+  SEND
+  SWAP
+  TOP_UP
 }

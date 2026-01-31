@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest) {
 
     // Update user profile
     const user = await prisma.user.update({
-      where: { address: address.toLowerCase() },
+      where: { walletAddress: address.toLowerCase() },
       data: {
         ...(fullName !== undefined && { fullName }),
         ...(email !== undefined && { email }),
@@ -26,6 +26,7 @@ export async function PUT(request: NextRequest) {
       success: true,
       user: {
         id: user.id,
+        walletAddress: user.walletAddress,
         address: user.address,
         fullName: user.fullName,
         email: user.email,

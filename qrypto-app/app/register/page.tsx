@@ -7,8 +7,8 @@ import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 import { useAccount, useSignMessage } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 
-const logoIcon = "https://www.figma.com/api/mcp/asset/8b4e284d-3ad6-4335-b712-0b23beb773e2";
-const googleIcon = "https://www.figma.com/api/mcp/asset/72b0e585-f195-467f-a9cb-9ba4ad7f87b1";
+const logoIcon = "/logo.svg";
+const googleIcon = "/Icon.svg";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,19 +24,25 @@ export default function RegisterPage() {
 
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { isAuthenticated, isNewUser, user, updateProfile, refreshUser } = useAuth();
+  const { isAuthenticated, isNewUser, user, updateProfile, refreshUser, needsOnboarding } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // If authenticated and not new user, redirect to home
+  // Redirect logic based on user state
   useEffect(() => {
     if (isAuthenticated && !isNewUser && user?.fullName) {
-      router.push("/");
+      // If user has completed profile but needs onboarding, redirect to onboarding
+      if (needsOnboarding) {
+        router.push("/onboarding");
+      } else {
+        // Otherwise redirect to home
+        router.push("/");
+      }
     }
-  }, [isAuthenticated, isNewUser, user, router]);
+  }, [isAuthenticated, isNewUser, user, needsOnboarding, router]);
 
   // If already authenticated (new user completing profile), show form immediately
   useEffect(() => {
@@ -119,7 +125,8 @@ export default function RegisterPage() {
 
         if (loginResponse.ok) {
           await refreshUser();
-          router.push("/");
+          // Redirect to onboarding for KYC
+          router.push("/onboarding");
         }
       } else {
         // If user already exists, update their profile instead
@@ -137,7 +144,8 @@ export default function RegisterPage() {
           
           if (updateResponse.ok) {
             await refreshUser();
-            router.push("/");
+            // Redirect to onboarding for KYC
+            router.push("/onboarding");
           } else {
             setError("Failed to update profile");
           }

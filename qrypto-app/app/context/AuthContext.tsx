@@ -4,9 +4,12 @@ import { useAccount, useDisconnect, useSignMessage } from "wagmi";
 
 interface User {
   address: string;
+  walletAddress?: string;
   fullName?: string;
   email?: string;
   phone?: string;
+  kycStatus?: string;
+  needsOnboarding?: boolean;
   createdAt?: string;
 }
 
@@ -15,11 +18,13 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isNewUser: boolean;
+  needsOnboarding: boolean;
   login: (address: string, signature?: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   signAndLogin: () => Promise<boolean>;
   refreshUser: () => Promise<void>;
+  markOnboardingComplete: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
@@ -103,9 +109,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newUser = data.isNewUser || false;
       setIsNewUser(newUser);
 
+      // Check if user needs onboarding (KYC)
+      const needsKYC = data.needsOnboarding || (data.user?.kycStatus === 'PENDING' || !data.user?.kycStatus);
+      setNeedsOnboarding(needsKYC);
+
       const userData: User = {
         address: walletAddress,
+        walletAddress: data.user?.walletAddress || walletAddress,
         ...data.user,
+        needsOnboarding: needsKYC,
       };
       setUser(userData);
       localStorage.setItem("qrypto_user", JSON.stringify(userData));
@@ -134,7 +146,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/update-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: user.address, ...data }),
+        body: JSON.stringify({ 
+          address: user.walletAddress || user.address, 
+          ...data 
+        }),
       });
 
       const result = await response.json();
@@ -157,27 +172,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (!user?.address) return;
+    if (!user?.walletAddress && !user?.address) return;
+    
+    const userAddress = user.walletAddress || user.address;
     
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: user.address }),
+        body: JSON.stringify({ address: userAddress }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        const needsKYC = data.needsOnboarding || (data.user?.kycStatus === 'PENDING' || !data.user?.kycStatus);
         const userData: User = {
-          address: user.address,
+          address: userAddress,
+          walletAddress: data.user?.walletAddress || userAddress,
           ...data.user,
+          needsOnboarding: needsKYC,
         };
         setUser(userData);
         localStorage.setItem("qrypto_user", JSON.stringify(userData));
         setIsNewUser(data.isNewUser || false);
+        setNeedsOnboarding(needsKYC);
       }
     } catch (error) {
       console.error("Refresh user error:", error);
+    }
+  };
+
+  const markOnboardingComplete = () => {
+    if (user) {
+      const updatedUser = { ...user, needsOnboarding: false, kycStatus: 'APPROVED' };
+      setUser(updatedUser);
+      localStorage.setItem("qrypto_user", JSON.stringify(updatedUser));
+      setNeedsOnboarding(false);
     }
   };
 
@@ -188,11 +218,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         isNewUser,
+        needsOnboarding,
         login,
         logout,
         updateProfile,
         signAndLogin,
         refreshUser,
+        markOnboardingComplete,
       }}
     >
       {children}

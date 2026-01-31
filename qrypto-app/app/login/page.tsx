@@ -1,22 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ConnectWallet, Wallet } from "@coinbase/onchainkit/wallet";
 import { Avatar, Name, Identity, Address } from "@coinbase/onchainkit/identity";
 import { useAccount } from "wagmi";
 import { useAuth } from "../context/AuthContext";
 
-const logoIcon = "https://www.figma.com/api/mcp/asset/ec8fba16-0d72-4a16-a0b2-a3eca811dc2c";
-
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
-  
+
   const { address, isConnected } = useAccount();
-  const { signAndLogin, isAuthenticated, isNewUser } = useAuth();
+  const { signAndLogin, isAuthenticated, isNewUser, needsOnboarding } = useAuth();
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -29,24 +28,31 @@ export default function LoginPage() {
       if (isNewUser) {
         // New user needs to complete profile
         router.push("/register");
+      } else if (needsOnboarding) {
+        // User has profile but needs onboarding (KYC)
+        router.push("/onboarding");
       } else {
+        // Fully onboarded user
         router.push("/");
       }
     }
-  }, [isAuthenticated, isNewUser, router]);
+  }, [isAuthenticated, isNewUser, needsOnboarding, router]);
 
   const handleWalletLogin = async () => {
     if (loading) return; // Prevent double execution
-    
+
     try {
       setLoading(true);
       setError("");
       const newUser = await signAndLogin();
-      
+
       // Redirect based on whether user is new
       if (newUser) {
         router.push("/register");
       } else {
+        // Check if user needs onboarding after successful login
+        // This will be handled by the useEffect above that checks needsOnboarding
+        // Just redirect to home and let the effect handle it
         router.push("/");
       }
     } catch (err) {
@@ -74,7 +80,13 @@ export default function LoginPage() {
               background: "linear-gradient(135deg, rgba(21, 93, 252, 1) 0%, rgba(0, 146, 184, 1) 100%)",
             }}
           >
-            <img src={logoIcon} alt="QRypto" className="w-10 h-10" />
+            <Image
+              src="/logo.svg"
+              alt="QRypto"
+              width={40}
+              height={40}
+              priority
+            />
           </div>
 
           <div className="text-center">
@@ -120,27 +132,37 @@ export default function LoginPage() {
           </div>
 
           {/* Wallet Connect / Sign In Button */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col items-center gap-4 w-full">
             {mounted && isConnected && address ? (
               <button
                 onClick={handleWalletLogin}
                 disabled={loading}
-                className="w-full h-16 bg-linear-to-r from-[#155dfc] to-[#0092b8] rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-opacity cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-16 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-opacity cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "linear-gradient(90deg, #155dfc 0%, #0092b8 100%)",
+                }}
               >
                 <span className="text-white text-lg tracking-[-0.44px] font-medium">
                   {loading ? "Authenticating..." : "Sign In with Wallet"}
                 </span>
               </button>
             ) : (
-              <Wallet>
-                <ConnectWallet className="w-full">
-                  <div className="w-full h-16 bg-linear-to-r from-[#155dfc] to-[#0092b8] rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-opacity cursor-pointer shadow-lg">
-                    <span className="text-white text-lg tracking-[-0.44px] font-medium">
-                      Connect Wallet
-                    </span>
-                  </div>
-                </ConnectWallet>
-              </Wallet>
+              <div className="w-full flex justify-center">
+                <Wallet>
+                  <ConnectWallet className="w-full">
+                    <div
+                      className="w-full h-16 rounded-2xl flex items-center justify-center gap-3 hover:opacity-90 transition-opacity cursor-pointer shadow-lg"
+                      style={{
+                        background: "linear-gradient(90deg, #155dfc 0%, #0092b8 100%)",
+                      }}
+                    >
+                      <span className="text-white text-lg tracking-[-0.44px] font-medium">
+                        Connect Wallet
+                      </span>
+                    </div>
+                  </ConnectWallet>
+                </Wallet>
+              </div>
             )}
           </div>
 

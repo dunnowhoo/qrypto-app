@@ -1,10 +1,10 @@
 "use client";
 import { http, createConfig } from "wagmi";
-import { base, baseSepolia } from "wagmi/chains";
+import { base, baseSepolia, mainnet } from "wagmi/chains";
 import { coinbaseWallet, injected, walletConnect } from "wagmi/connectors";
 
 export const config = createConfig({
-  chains: [base, baseSepolia],
+  chains: [mainnet, base, baseSepolia],
   connectors: [
     injected(), // MetaMask, Brave, etc.
     coinbaseWallet({
@@ -16,12 +16,14 @@ export const config = createConfig({
       metadata: {
         name: "QRypto",
         description: "QRypto - Crypto Payment App",
-        url: "https://qrypto.app",
-        icons: ["https://qrypto.app/icon.png"],
+        url: typeof window !== 'undefined' ? window.location.origin : "https://qrypto.vercel.app",
+        icons: [typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : "https://qrypto.vercel.app/logo.svg"],
       },
+      showQrModal: true,
     }),
   ],
   transports: {
+    [mainnet.id]: http(),
     [base.id]: http(),
     [baseSepolia.id]: http(),
   },
