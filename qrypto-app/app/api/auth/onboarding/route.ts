@@ -113,25 +113,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
+
     // Check if current user already attempted KYC with this email
     const currentUser = await prisma.user.findUnique({
       where: { walletAddress: walletAddress.toLowerCase() }
     });
 
-    if (currentUser && currentUser.email === email && currentUser.kycStatus === 'PENDING') {
-      return NextResponse.json(
-        {
-          error: "You have already submitted KYC with this email. Please use your IDRX API keys instead.",
-          code: "EMAIL_ALREADY_EXISTS",
-          details: "This email was registered with IDRX in a previous attempt. Please check the 'I already have an IDRX account' option and enter your API credentials, or contact support to retrieve them."
-        },
-        { status: 409 }
-      );
-    }
-
     let apiKey: string;
     let apiSecret: string;
 
+    // ✅ If user already has API keys in database (PENDING status), use them
+    if (currentUser && currentUser.email === email && currentUser.kycStatus === 'PENDING') {
+      if (currentUser.encryptedApiKey && currentUser.encryptedSecretKey) {
+        console.log("User already has API keys in database. Using existing keys to complete KYC.");
+        
+        // Decrypt existing API keys from database
+        const { decryptData } = await import("@/lib/encryption");
+        apiKey = decryptData(currentUser.encryptedApiKey);
+        apiSecret = decryptData(currentUser.encryptedSecretKey);
+        
+        // Update user with APPROVED status
+        const user = await prisma.user.update({
+          where: { walletAddress: walletAddress.toLowerCase() },
+          data: {
+            address,
+            fullName: fullname,
+            email,
+            idNumber,
+            kycStatus: "APPROVED",
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "KYC completed using existing IDRX account",
+          data: {
+            userId: user.id,
+            fullname: user.fullName,
+            kycStatus: "APPROVED",
+            usedExistingKeys: true,
+            createdAt: user.createdAt,
+          },
+        }, { status: 200 });
+      } else {
+        // User has PENDING status but no API keys - show error
+        return NextResponse.json(
+          { 
+            error: "You have already submitted KYC with this email. Please use your IDRX API keys instead.",
+            code: "EMAIL_ALREADY_EXISTS",
+            details: "This email was registered with IDRX in a previous attempt. Please check the 'I already have an IDRX account' option and enter your API credentials, or contact support to retrieve them."
+          },
+          { status: 409 }
+        );
+      }
+    }
     // If user provides existing API keys, use them instead of calling IDRX onboarding
     if (existingApiKey && existingApiSecret) {
       console.log("Using existing API keys provided by user");
