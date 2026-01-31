@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const kycCheck = await requireKYC(walletAddress);
     if (!kycCheck.success) {
       return NextResponse.json(
-        { 
+        {
           error: kycCheck.error,
           requiresKYC: true,
         },
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         type: "QRIS_PAYMENT",
         status: "PENDING",
+        amount: totalAmount,
         cryptoAmount: totalAmount,
         cryptoCurrency: "IDRX",
         fiatAmount: finalAmount,

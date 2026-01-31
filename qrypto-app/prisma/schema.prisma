@@ -131,7 +131,7 @@ model TreasuryWallet {
 }
 
 model MerchantMap {
-  id            String   @id
+  id            String   @id @default(uuid())
   nmid          String?  @unique
   merchantName  String?
   bankCode      String
@@ -140,7 +140,7 @@ model MerchantMap {
   isActive      Boolean  @default(true)
   description   String?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 
   @@index([merchantName])
 }

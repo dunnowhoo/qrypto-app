@@ -32,18 +32,18 @@ export default function TransferPage() {
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { isAuthenticated, needsOnboarding } = useAuth();
-  
+
   const [banks, setBanks] = useState<BankMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ErrorType | null>(null);
   const [success, setSuccess] = useState(false);
   const [idrxBalance, setIdrxBalance] = useState<string>("0");
-  
+
   const [loadingState, setLoadingState] = useState<LoadingState>({
     stage: 'idle',
     message: ''
   });
-  
+
   const [formData, setFormData] = useState({
     selectedBank: "",
     bankAccountNumber: "",
@@ -65,12 +65,12 @@ export default function TransferPage() {
   useEffect(() => {
     const fetchBanks = async () => {
       if (!address) return;
-      
+
       try {
         setLoading(true);
         const response = await fetch(`/api/transaction/method?walletAddress=${address}`);
         const data = await response.json();
-        
+
         if (response.ok && data.data) {
           setBanks(data.data);
         } else {
@@ -93,7 +93,7 @@ export default function TransferPage() {
 
     const fetchBalance = async () => {
       if (!address || !publicClient) return;
-      
+
       try {
         const balance = await getIDRXBalance(address, publicClient as any);
         setIdrxBalance(balance);
@@ -118,7 +118,7 @@ export default function TransferPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!address) {
       setError({
         type: 'validation',
@@ -204,7 +204,7 @@ export default function TransferPage() {
 
       const provider = new BrowserProvider(walletClient as any);
       const signer = await provider.getSigner();
-      
+
       let txHash: string;
       try {
         txHash = await burnIDRX(signer, formData.amount);
@@ -277,7 +277,7 @@ export default function TransferPage() {
       }, 2000);
     } catch (err: any) {
       console.error('Transfer error:', err);
-      
+
       if (err.type) {
         setError(err);
       } else {
@@ -354,7 +354,7 @@ export default function TransferPage() {
                 <ArrowLeft className="w-5 h-5 text-white" />
               </button>
             </div>
-            
+
             <div className="absolute bottom-6 left-6">
               <h1 className="text-white text-2xl font-semibold">Transfer to Bank</h1>
               <p className="text-white/80 text-sm mt-1">Redeem IDRX to your bank account</p>
@@ -364,231 +364,228 @@ export default function TransferPage() {
           {/* Main Content */}
           <div className="px-6 mt-6">
 
-        {/* Info Banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <Banknote className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-900">
-              <p className="font-semibold mb-1">Important Information:</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-800">
-                <li>Minimum transfer: Rp 20,000</li>
-                <li>Maximum transfer: Rp 1,000,000,000 (per bank limit may vary)</li>
-                <li>Processing time: max 24 hours</li>
-                <li>Request will be canceled if payment not made within 24 hours</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Bank Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Bank <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="selectedBank"
-                value={formData.selectedBank}
-                onChange={handleInputChange}
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-              >
-                <option value="">Choose a bank</option>
-                {banks.map((bank) => (
-                  <option key={bank.bankCode} value={bank.bankCode}>
-                    {bank.bankName} (Max: Rp {parseInt(bank.maxAmountTransfer).toLocaleString("id-ID")})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Bank Account Number */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="bankAccountNumber"
-                value={formData.bankAccountNumber}
-                onChange={handleInputChange}
-                required
-                placeholder="1234567890"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Account Holder Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Holder Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="bankAccountName"
-                value={formData.bankAccountName}
-                onChange={handleInputChange}
-                required
-                placeholder="JOHN DOE"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Must match the name registered with the bank
-              </p>
-            </div>
-
-            {/* Amount */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount (IDR) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  required
-                  min="20000"
-                  step="1000"
-                  placeholder="20000"
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Minimum: Rp 20,000
-              </p>
-            </div>
-
-            {/* Notes (Optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                rows={3}
-                placeholder="Add notes if account holder name differs from your IDRX account"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Required if transferring to a different account holder name
-              </p>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className={`rounded-xl p-4 border ${
-                error.type === 'validation' ? 'bg-yellow-50 border-yellow-200' :
-                error.type === 'kyc' ? 'bg-orange-50 border-orange-200' :
-                error.type === 'balance' ? 'bg-red-50 border-red-200' :
-                'bg-red-50 border-red-200'
-              }`}>
-                <div className="flex items-start gap-3">
-                  <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
-                    error.type === 'validation' ? 'text-yellow-600' :
-                    error.type === 'kyc' ? 'text-orange-600' :
-                    error.type === 'balance' ? 'text-red-600' :
-                    'text-red-600'
-                  }`} />
-                  <div className="flex-1">
-                    <h3 className={`font-semibold text-sm mb-1 ${
-                      error.type === 'validation' ? 'text-yellow-900' :
-                      error.type === 'kyc' ? 'text-orange-900' :
-                      error.type === 'balance' ? 'text-red-900' :
-                      'text-red-900'
-                    }`}>
-                      {error.message}
-                    </h3>
-                    {error.details && (
-                      <p className={`text-xs ${
-                        error.type === 'validation' ? 'text-yellow-800' :
-                        error.type === 'kyc' ? 'text-orange-800' :
-                        error.type === 'balance' ? 'text-red-800' :
-                        'text-red-800'
-                      }`}>
-                        {error.details}
-                      </p>
-                    )}
-                    {error.type === 'kyc' && (
-                      <button
-                        onClick={() => router.push('/onboarding')}
-                        className="mt-2 text-xs font-medium text-orange-700 hover:text-orange-900 underline"
-                      >
-                        Complete KYC Now →
-                      </button>
-                    )}
-                  </div>
+            {/* Info Banner */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <Banknote className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-900">
+                  <p className="font-semibold mb-1">Important Information:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-800">
+                    <li>Minimum transfer: Rp 20,000</li>
+                    <li>Maximum transfer: Rp 1,000,000,000 (per bank limit may vary)</li>
+                    <li>Processing time: max 24 hours</li>
+                    <li>Request will be canceled if payment not made within 24 hours</li>
+                  </ul>
                 </div>
               </div>
-            )}
-
-            {/* Balance Display */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-900 font-medium">Your IDRX Balance:</span>
-                <span className="text-lg font-bold text-blue-600">
-                  {parseFloat(idrxBalance).toLocaleString("id-ID")} IDRX
-                </span>
-              </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loadingState.stage !== 'idle'}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {loadingState.stage !== 'idle' ? "Processing..." : "Submit Transfer Request"}
-            </button>
-          </form>
-        </div>
+            {/* Form */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Bank Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Bank <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="selectedBank"
+                    value={formData.selectedBank}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">Choose a bank</option>
+                    {banks.map((bank) => (
+                      <option key={bank.bankCode} value={bank.bankCode}>
+                        {bank.bankName} (Max: Rp {parseInt(bank.maxAmountTransfer).toLocaleString("id-ID")})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        {/* Warning */}
-        <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-orange-900">
-              <span className="font-semibold">Note:</span> IDRX is not responsible if a redeem error occurs due to an incorrect bank account number. Please double-check your account details before submitting.
-            </p>
-          </div>
-        </div>
-      </div>
-        </div>
+                {/* Bank Account Number */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankAccountNumber"
+                    value={formData.bankAccountNumber}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="1234567890"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
 
-      {/* Loading Overlay */}
-      {loadingState.stage !== 'idle' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 shadow-2xl">
-            <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <p className="text-center font-bold text-lg text-gray-900 mb-2">
-              {loadingState.stage === 'checking' && 'Preparing Transaction'}
-              {loadingState.stage === 'burning' && 'Burning IDRX Tokens'}
-              {loadingState.stage === 'submitting' && 'Submitting Request'}
-            </p>
-            <p className="text-center text-sm text-gray-600 mb-4">
-              {loadingState.message}
-            </p>
-            {loadingState.stage === 'burning' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-900 text-center font-medium">
-                  ⚠️ Please confirm the transaction in your wallet
+                {/* Account Holder Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Holder Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankAccountName"
+                    value={formData.bankAccountName}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="JOHN DOE"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must match the name registered with the bank
+                  </p>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Amount (IDR) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
+                    <input
+                      type="number"
+                      name="amount"
+                      value={formData.amount}
+                      onChange={handleInputChange}
+                      required
+                      min="20000"
+                      step="1000"
+                      placeholder="20000"
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum: Rp 20,000
+                  </p>
+                </div>
+
+                {/* Notes (Optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    rows={3}
+                    placeholder="Add notes if account holder name differs from your IDRX account"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Required if transferring to a different account holder name
+                  </p>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className={`rounded-xl p-4 border ${error.type === 'validation' ? 'bg-yellow-50 border-yellow-200' :
+                      error.type === 'kyc' ? 'bg-orange-50 border-orange-200' :
+                        error.type === 'balance' ? 'bg-red-50 border-red-200' :
+                          'bg-red-50 border-red-200'
+                    }`}>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${error.type === 'validation' ? 'text-yellow-600' :
+                          error.type === 'kyc' ? 'text-orange-600' :
+                            error.type === 'balance' ? 'text-red-600' :
+                              'text-red-600'
+                        }`} />
+                      <div className="flex-1">
+                        <h3 className={`font-semibold text-sm mb-1 ${error.type === 'validation' ? 'text-yellow-900' :
+                            error.type === 'kyc' ? 'text-orange-900' :
+                              error.type === 'balance' ? 'text-red-900' :
+                                'text-red-900'
+                          }`}>
+                          {error.message}
+                        </h3>
+                        {error.details && (
+                          <p className={`text-xs ${error.type === 'validation' ? 'text-yellow-800' :
+                              error.type === 'kyc' ? 'text-orange-800' :
+                                error.type === 'balance' ? 'text-red-800' :
+                                  'text-red-800'
+                            }`}>
+                            {error.details}
+                          </p>
+                        )}
+                        {error.type === 'kyc' && (
+                          <button
+                            onClick={() => router.push('/onboarding')}
+                            className="mt-2 text-xs font-medium text-orange-700 hover:text-orange-900 underline"
+                          >
+                            Complete KYC Now →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Balance Display */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-900 font-medium">Your IDRX Balance:</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {parseFloat(idrxBalance).toLocaleString("id-ID")} IDRX
+                    </span>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loadingState.stage !== 'idle'}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {loadingState.stage !== 'idle' ? "Processing..." : "Submit Transfer Request"}
+                </button>
+              </form>
+            </div>
+
+            {/* Warning */}
+            <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-orange-900">
+                  <span className="font-semibold">Note:</span> IDRX is not responsible if a redeem error occurs due to an incorrect bank account number. Please double-check your account details before submitting.
                 </p>
               </div>
-            )}
-            {loadingState.stage === 'submitting' && (
-              <p className="text-xs text-gray-500 text-center">
-                This may take a few moments...
-              </p>
-            )}
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Loading Overlay */}
+        {loadingState.stage !== 'idle' && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 shadow-2xl">
+              <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <p className="text-center font-bold text-lg text-gray-900 mb-2">
+                {loadingState.stage === 'checking' && 'Preparing Transaction'}
+                {loadingState.stage === 'burning' && 'Burning IDRX Tokens'}
+                {loadingState.stage === 'submitting' && 'Submitting Request'}
+              </p>
+              <p className="text-center text-sm text-gray-600 mb-4">
+                {loadingState.message}
+              </p>
+              {loadingState.stage === 'burning' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-900 text-center font-medium">
+                    ⚠️ Please confirm the transaction in your wallet
+                  </p>
+                </div>
+              )}
+              {loadingState.stage === 'submitting' && (
+                <p className="text-xs text-gray-500 text-center">
+                  This may take a few moments...
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

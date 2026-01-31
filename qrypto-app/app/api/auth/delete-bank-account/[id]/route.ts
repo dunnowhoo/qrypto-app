@@ -3,11 +3,11 @@ import { db } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import { generateIdrxHeaders } from "@/lib/idrx";
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: bankAccountId } = await params;
     const { searchParams } = new URL(request.url);
     const walletAddress = searchParams.get("walletAddress");
-    const bankAccountId = params.id;
 
     if (!walletAddress || !bankAccountId) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
@@ -23,9 +23,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     const bankAccount = await db.bankAccount.findFirst({
-      where: { 
+      where: {
         id: bankAccountId,
-        userId: user.id 
+        userId: user.id
       }
     });
 
@@ -37,17 +37,17 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const secretKey = decrypt(user.encryptedSecretKey);
 
     // Call IDRX delete bank account API
-    const requestBody = { 
-      bankCode: bankAccount.bankCode, 
-      bankAccountNumber: bankAccount.bankAccountNumber 
+    const requestBody = {
+      bankCode: bankAccount.bankCode,
+      bankAccountNumber: bankAccount.bankAccountNumber
     };
     const headers = generateIdrxHeaders(apiKey, secretKey, requestBody);
 
     const response = await fetch(`${process.env.IDRX_BASE_URL}/api/onboarding/delete-bank-account`, {
       method: "DELETE",
-      headers: { 
-        ...headers, 
-        "Content-Type": "application/json" 
+      headers: {
+        ...headers,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(requestBody)
     });

@@ -3,10 +3,11 @@ import { deleteBankAccount } from "@/lib/idrx";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { bankId: string } }
+  { params }: { params: Promise<{ bankId: string }> }
 ) {
   try {
-    const bankId = parseInt(params.bankId);
+    const { bankId: bankIdStr } = await params;
+    const bankId = parseInt(bankIdStr);
 
     if (isNaN(bankId)) {
       return NextResponse.json(
