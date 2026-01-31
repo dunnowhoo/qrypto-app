@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       const kycCheck = await requireKYC(walletAddress);
       if (!kycCheck.success) {
         return NextResponse.json(
-          { 
+          {
             error: kycCheck.error,
             requiresKYC: true,
           },
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Find the transaction with QRIS payment data
     const transaction = await prisma.transaction.findUnique({
       where: { id: paymentId },
-      include: { qrisPayment: true },
+      include: { QrisPayment: true },
     });
 
     if (!transaction) {
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
 
     // Parse QRIS to get merchant identifier
     let merchantMap = null;
-    if (transaction.qrisPayment?.qrisRaw) {
-      const qrisData = parseQRIS(transaction.qrisPayment.qrisRaw);
+    if (transaction.QrisPayment?.qrisRaw) {
+      const qrisData = parseQRIS(transaction.QrisPayment.qrisRaw);
       const { nmid, merchantName } = getMerchantIdentifier(qrisData);
 
       // Lookup merchant in our mapping table
@@ -85,11 +85,11 @@ export async function POST(request: NextRequest) {
           where: { nmid, isActive: true },
         });
       }
-      
+
       if (!merchantMap && merchantName) {
         // Fuzzy match by name (case-insensitive)
         merchantMap = await prisma.merchantMap.findFirst({
-          where: { 
+          where: {
             merchantName: { contains: merchantName, mode: "insensitive" },
             isActive: true,
           },
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         bankCode: merchantMap.bankCode as XenditBankCode,
         accountNumber: merchantMap.accountNumber,
         accountHolderName: merchantMap.accountName,
-        description: `QRIS Payment to ${merchantMap.merchantName || transaction.qrisPayment?.merchantName}`,
+        description: `QRIS Payment to ${merchantMap.merchantName || transaction.QrisPayment?.merchantName}`,
       };
 
       disbursementResult = await processDisbursement(disbursementRequest);
@@ -122,10 +122,10 @@ export async function POST(request: NextRequest) {
           data: { status: "FAILED" },
         });
 
-        if (transaction.qrisPayment) {
+        if (transaction.QrisPayment) {
           await prisma.qrisPayment.update({
-            where: { id: transaction.qrisPayment.id },
-            data: { 
+            where: { id: transaction.QrisPayment.id },
+            data: {
               gatewayStatus: "FAILED",
               paymentGateway: "xendit",
             },
@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
     } else {
       // No merchant mapping found
       // For hackathon demo: we'll still mark it as success but log a warning
-      console.warn(`No merchant mapping found for QRIS. Merchant: ${transaction.qrisPayment?.merchantName}`);
-      
+      console.warn(`No merchant mapping found for QRIS. Merchant: ${transaction.QrisPayment?.merchantName}`);
+
       // Option 1: Fail the transaction (stricter)
       // return NextResponse.json(
       //   { error: "Merchant not registered in QRypto network" },
@@ -165,9 +165,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Update QRIS payment record
-    if (transaction.qrisPayment) {
+    if (transaction.QrisPayment) {
       await prisma.qrisPayment.update({
-        where: { id: transaction.qrisPayment.id },
+        where: { id: transaction.QrisPayment.id },
         data: {
           gatewayStatus: "SUCCESS",
           gatewayRefId: gatewayTransactionId,
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
         status: "SUCCESS",
         txHash,
         amount: transaction.fiatAmount?.toNumber() || 0,
-        merchantName: transaction.qrisPayment?.merchantName || "Merchant",
+        merchantName: transaction.QrisPayment?.merchantName || "Merchant",
         gatewayTransactionId,
         merchantMapped: !!merchantMap,
         completedAt: updatedTransaction.completedAt,

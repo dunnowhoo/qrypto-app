@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         walletAddress: true,
         kycStatus: true,
         createdAt: true,
-        bankAccounts: {
+        BankAccount: {
           select: {
             id: true,
             bankCode: true,

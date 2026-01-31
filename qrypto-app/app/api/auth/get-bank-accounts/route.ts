@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const user = await db.user.findUnique({
       where: { walletAddress },
       include: {
-        bankAccounts: true
+        BankAccount: true
       }
     });
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     }
 
     // Enrich bank accounts with bank names
-    const enrichedBankAccounts = user.bankAccounts.map(account => {
+    const enrichedBankAccounts = user.BankAccount.map(account => {
       const bankInfo = BANK_LIST.find(bank => bank.bankCode === account.bankCode);
       return {
         ...account,

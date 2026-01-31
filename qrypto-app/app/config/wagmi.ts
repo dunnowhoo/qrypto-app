@@ -16,9 +16,10 @@ export const config = createConfig({
       metadata: {
         name: "QRypto",
         description: "QRypto - Crypto Payment App",
-        url: "https://qrypto.app",
-        icons: ["https://qrypto.app/icon.png"],
+        url: typeof window !== 'undefined' ? window.location.origin : "https://qrypto.vercel.app",
+        icons: [typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : "https://qrypto.vercel.app/logo.svg"],
       },
+      showQrModal: true,
     }),
   ],
   transports: {

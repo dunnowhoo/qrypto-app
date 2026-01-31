@@ -7,55 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id               String        @id @default(uuid())
-  walletAddress    String        @unique
-  address          String?
-  fullName         String?
-  email            String?
-  phone            String?
-  idNumber         String?       @unique
-  kycStatus        KycStatus     @default(PENDING)
-  encryptedApiKey  String?
-  encryptedSecretKey String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  
-  bankAccounts     BankAccount[]
-  transactions     Transaction[]
-}
-
 model BankAccount {
   id                String        @id @default(uuid())
   userId            String
   bankCode          String
   bankAccountNumber String
   createdAt         DateTime      @default(now())
-  
-  user              User          @relation(fields: [userId], references: [id])
-  transactions      Transaction[]
-  merchants         Merchant[]
+  User              User          @relation(fields: [userId], references: [id])
+  Merchant          Merchant[]
+  Transaction       Transaction[]
 }
 
-// Merchant for QRIS payment routing
 model Merchant {
-  id              String      @id @default(uuid())
-  merchantId      String      @unique
-  name            String
-  bankAccountId   String
-  defaultAmount   Float
-  nmid            String?     @unique  // National Merchant ID from QRIS
-  merchantName    String?              // Fallback: match by name
-  bankCode        String?              // Xendit bank code: "BCA", "MANDIRI", etc.
-  accountNumber   String?              // Bank account number
-  accountName     String?              // Account holder name
-  isActive        Boolean     @default(true)
-  description     String?              // Notes about this merchant
-  updatedAt       DateTime    @updatedAt
-  
-  bankAccount     BankAccount @relation(fields: [bankAccountId], references: [id])
-  
+  id            String      @id @default(uuid())
+  merchantId    String      @unique
+  name          String
+  bankAccountId String
+  defaultAmount Float
+  nmid          String?     @unique
+  merchantName  String?
+  bankCode      String?
+  accountNumber String?
+  accountName   String?
+  isActive      Boolean     @default(true)
+  description   String?
+  updatedAt     DateTime    @updatedAt
+  BankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+
   @@index([merchantName])
+}
+
+model MerchantMap {
+  id            String   @id @default(uuid())
+  nmid          String?  @unique
+  merchantName  String?
+  bankCode      String
+  accountNumber String
+  accountName   String
+  isActive      Boolean  @default(true)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([merchantName])
+}
+
+model QrisPayment {
+  id              String      @id @default(cuid())
+  transactionId   String      @unique
+  qrisRaw         String
+  merchantName    String
+  merchantCity    String?
+  merchantId      String?
+  terminalId      String?
+  paymentGateway  String?
+  gatewayRefId    String?
+  gatewayStatus   String?
+  gatewayResponse Json?
+  createdAt       DateTime    @default(now())
+  paidAt          DateTime?
+  Transaction     Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([gatewayRefId])
+  @@index([merchantId])
 }
 
 model Transaction {
@@ -68,58 +82,23 @@ model Transaction {
   merchantId     String?
   createdAt      DateTime          @default(now())
   completedAt    DateTime?
-  
-  // Crypto side
   cryptoAmount   Decimal?          @db.Decimal(36, 18)
   cryptoCurrency String?           @default("IDRX")
   txHash         String?
   fromAddress    String?
   toAddress      String?
   networkFee     Decimal?          @db.Decimal(36, 18)
-  
-  // Fiat side
   fiatAmount     Decimal?          @db.Decimal(20, 2)
   fiatCurrency   String?           @default("IDR")
-  
-  // QRIS specific
-  qrisPayment    QrisPayment?
-  
-  // Metadata
   description    String?
   updatedAt      DateTime          @updatedAt
-  
-  user           User              @relation(fields: [userId], references: [id])
-  bankAccount    BankAccount?      @relation(fields: [bankAccountId], references: [id])
-  
-  @@index([userId])
+  QrisPayment    QrisPayment?
+  BankAccount    BankAccount?      @relation(fields: [bankAccountId], references: [id])
+  User           User              @relation(fields: [userId], references: [id])
+
   @@index([status])
   @@index([txHash])
-}
-
-model QrisPayment {
-  id              String      @id @default(cuid())
-  transactionId   String      @unique
-  transaction     Transaction @relation(fields: [transactionId], references: [id])
-  
-  // QRIS Data
-  qrisRaw         String
-  merchantName    String
-  merchantCity    String?
-  merchantId      String?
-  terminalId      String?
-  
-  // Payment Gateway
-  paymentGateway  String?
-  gatewayRefId    String?
-  gatewayStatus   String?
-  gatewayResponse Json?
-  
-  // Timestamps
-  createdAt       DateTime    @default(now())
-  paidAt          DateTime?
-  
-  @@index([merchantId])
-  @@index([gatewayRefId])
+  @@index([userId])
 }
 
 model TreasuryWallet {
@@ -130,33 +109,29 @@ model TreasuryWallet {
   createdAt DateTime @default(now())
 }
 
-model MerchantMap {
-  id            String   @id
-  nmid          String?  @unique
-  merchantName  String?
-  bankCode      String
-  accountNumber String
-  accountName   String
-  isActive      Boolean  @default(true)
-  description   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime
-
-  @@index([merchantName])
+model User {
+  id                 String        @id @default(uuid())
+  walletAddress      String        @unique
+  address            String?
+  fullName           String?
+  email              String?
+  phone              String?
+  idNumber           String?       @unique
+  kycStatus          KycStatus     @default(PENDING)
+  encryptedApiKey    String?
+  encryptedSecretKey String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  BankAccount        BankAccount[]
+  Transaction        Transaction[]
 }
 
-//Transaction types
-enum TransactionType {
-  MANUAL
-  QRIS
-  QRIS_PAYMENT
-  RECEIVE
-  SEND
-  SWAP
-  TOP_UP
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-// Transaction status
 enum TransactionStatus {
   PENDING
   PROCESSING
@@ -167,8 +142,12 @@ enum TransactionStatus {
   REFUNDED
 }
 
-enum KycStatus {
-  PENDING
-  APPROVED
-  REJECTED
+enum TransactionType {
+  MANUAL
+  QRIS
+  QRIS_PAYMENT
+  RECEIVE
+  SEND
+  SWAP
+  TOP_UP
 }
