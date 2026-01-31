@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const idNumber = formData.get("idNumber") as string;
     const idFile = formData.get("idFile") as File;
     const walletAddress = formData.get("walletAddress") as string;
-    
+
     // Optional: User can provide existing API keys instead of creating new account
     const existingApiKey = formData.get("apiKey") as string;
     const existingApiSecret = formData.get("apiSecret") as string;
@@ -25,9 +25,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ NEW: Check if this NIK is already registered and APPROVED
+    // If yes, link this new wallet to the existing user (same person, different wallet)
+    const existingUserWithNIK = await prisma.user.findFirst({
+      where: {
+        idNumber: idNumber,
+        kycStatus: "APPROVED"
+      }
+    });
+
+    if (existingUserWithNIK) {
+      // Same person (NIK) trying to add a new wallet
+      console.log(`NIK ${idNumber} already approved. Linking new wallet to existing user.`);
+
+      // Check if this wallet is already linked to a different person
+      const currentWalletUser = await prisma.user.findUnique({
+        where: { walletAddress: walletAddress.toLowerCase() }
+      });
+
+      if (currentWalletUser && currentWalletUser.idNumber && currentWalletUser.idNumber !== idNumber) {
+        return NextResponse.json(
+          {
+            error: "This wallet is already registered with a different identity (NIK)",
+            code: "WALLET_ALREADY_USED",
+            details: "This wallet address is already linked to another person's KYC. Please use a different wallet."
+          },
+          { status: 409 }
+        );
+      }
+
+      // Link this wallet to the existing approved user
+      const user = await prisma.user.upsert({
+        where: { walletAddress: walletAddress.toLowerCase() },
+        update: {
+          // Copy KYC data from approved user
+          address: existingUserWithNIK.address,
+          fullName: existingUserWithNIK.fullName,
+          email: existingUserWithNIK.email,
+          phone: existingUserWithNIK.phone,
+          idNumber: existingUserWithNIK.idNumber,
+          kycStatus: "APPROVED",
+          encryptedApiKey: existingUserWithNIK.encryptedApiKey,
+          encryptedSecretKey: existingUserWithNIK.encryptedSecretKey,
+        },
+        create: {
+          walletAddress: walletAddress.toLowerCase(),
+          address: existingUserWithNIK.address,
+          fullName: existingUserWithNIK.fullName,
+          email: existingUserWithNIK.email,
+          phone: existingUserWithNIK.phone,
+          idNumber: existingUserWithNIK.idNumber,
+          kycStatus: "APPROVED",
+          encryptedApiKey: existingUserWithNIK.encryptedApiKey,
+          encryptedSecretKey: existingUserWithNIK.encryptedSecretKey,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Wallet linked to existing KYC profile. No need to re-do KYC!",
+        data: {
+          userId: user.id,
+          fullname: user.fullName,
+          kycStatus: "APPROVED",
+          linkedFromNIK: true,
+          createdAt: user.createdAt,
+        },
+      }, { status: 200 });
+    }
+
     // Check if email is already used by another wallet address
     const existingUserWithEmail = await prisma.user.findFirst({
-      where: { 
+      where: {
         email: email,
         walletAddress: { not: walletAddress.toLowerCase() }
       }
@@ -35,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUserWithEmail) {
       return NextResponse.json(
-        { 
+        {
           error: "This email is already registered with another wallet address",
           code: "EMAIL_ALREADY_USED",
           details: "Each email can only be used with one wallet address. Please use a different email or connect the wallet that was originally registered with this email."
@@ -51,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     if (currentUser && currentUser.email === email && currentUser.kycStatus === 'PENDING') {
       return NextResponse.json(
-        { 
+        {
           error: "You have already submitted KYC with this email. Please use your IDRX API keys instead.",
           code: "EMAIL_ALREADY_EXISTS",
           details: "This email was registered with IDRX in a previous attempt. Please check the 'I already have an IDRX account' option and enter your API credentials, or contact support to retrieve them."
@@ -92,7 +161,7 @@ export async function POST(request: NextRequest) {
         // Check if error is about duplicate email
         if (idrxError.message?.includes('email is already used')) {
           return NextResponse.json(
-            { 
+            {
               error: "Email already registered with IDRX. Please use your existing API keys instead.",
               code: "EMAIL_ALREADY_EXISTS",
               details: "If you already have an IDRX account, please enter your API Key and Secret instead of creating a new account."
