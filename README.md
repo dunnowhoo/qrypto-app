@@ -134,17 +134,6 @@ npm install
 
 3. **Setup Environment:**
 Create a `.env` file in the `qrypto-app/` directory:
-```env
-# --- Project Info ---
-NEXT_PUBLIC_PROJECT_NAME="qrypto-app"
-
-# --- OnchainKit ---
-NEXT_PUBLIC_ONCHAINKIT_API_KEY="1e6373b6-2b48-4e48-bc3a-45e82c851e56"
-
-# --- Database (Prisma Postgres) ---
-DATABASE_URL="postgres://8b9c3ca92d9efd60fe9e6e153e3881ffa2d0c390a9feb49a2d2bdbc7d1a5e146:sk_sVxJy7xuswDGqSRv4EUY9@db.prisma.io:5432/postgres?sslmode=require"
-
-```
 
 
 4. **Initialize Database (Prisma Postgres):**
